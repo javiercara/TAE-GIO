@@ -1,0 +1,259 @@
+---
+title: "Regresión Lineal Simple"
+author: "Javier Cara"
+date: "11 de septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Modelo
+
+Datos:
+
+$(x_i,y_i), i = 1,\ldots,n$
+
+Modelo:
+
+$y_i = \beta_0 + \beta_1 x_i + u_i, \ u_i \sim N(0,\sigma^2)$
+
+Parámetros: 
+
+$\beta_0, \beta_1, \sigma^2$
+
+Predicción:
+
+$y_i = \hat \beta_0 + \hat \beta_1 x_i + e_i$
+
+$\hat y_i = \hat \beta_0 + \hat \beta_1 x_i$
+
+# Estimación del modelo
+
+Vamos a utilizar un método que se denomina mínimos cuadrados.
+
+```{r}
+datos = read.csv("Advertising.csv")
+str(datos)
+```
+
+```{r}
+plot(datos$TV, datos$sales, xlab = "TV", ylab = "Sales", col = "red", pch = 20)
+```
+
+Se define la *suma de residuos al cuadrado* o *residual sum of squares* (RSS):
+
+$RSS = (y_1 - \hat \beta_0 - \hat \beta_1 x_1)^2 + (y_2 - \hat \beta_0 - \hat \beta_1 x_2)^2 + \cdots + (y_p - \hat \beta_0 - \hat \beta_1 x_p)^2 =  \sum \limits _{i=1}^n e_i^2$
+
+El metodo de minimos cuadrados minimiza esta cantidad.
+
+$\frac{\partial RSS}{\partial \hat \beta_1} = 0 \Rightarrow \hat \beta_1 = \frac{\sum _{i=1}^n (x_i - \bar x)(y_i - \bar y)}{\sum _{i=1}^n (x_i - \bar x)^2} = \frac{cov(x,y)}{s_x^2}$
+
+$\frac{\partial RSS}{\partial \hat \beta_0} = 0 \Rightarrow \hat \beta_0 = \bar y - \beta_1 \bar x$
+
+$\hat \sigma ^2 = \frac{\sum _{i=1}^n (y_i - \hat y)^2}{n-2} = \frac{RSS}{n-2}$
+
+Esos parámetros los podemos calcular creando una función:
+
+```{r}
+source("02_funciones.R")
+x = datos$TV
+y = datos$sales
+m1 = rls(y,x)
+str(m1)
+```
+
+En R se hace:
+
+```{r}
+m2 = lm(y ~ x)
+summary(m2)
+```
+
+O también:
+
+```{r}
+m3 = lm(sales ~ TV, data = datos)
+summary(m3)
+```
+
+
+Dibujamos la solución:
+
+```{r}
+plot(datos$TV, datos$sales, xlab = "TV", ylab = "Sales", col = "red", pch = 20)
+abline(m2, col="blue", lwd = 1)
+```
+
+
+
+# Precisión de los coeficientes estimados
+
+Los estimadores de los coeficientes son variables aleatorias. Se puede demostrar que:
+
+$\hat \beta_0 \sim N \left( \beta_0, SE(\hat \beta_0) \right)$
+
+$\hat \beta_1 \sim N \left( \beta_1, SE(\hat \beta_1) \right)$
+
+Donde SE significa Standard Error y mide la precisión de los estimadores.
+
+$SE(\hat \beta_0) = \frac{\sigma^2}{n}\left(1 + \frac{\bar x^2}{s_x^2} \right)$
+
+$SE(\hat \beta_1) = \frac{\sigma^2}{ns_x^2}$
+
+```{r}
+source("02_funciones.R")
+rls_se(m1)
+```
+
+
+## Intervalos de confianza
+
+Se calcula con la formula:
+
+$\hat \beta_1 \pm t_{n-2;\alpha/2} \cdot SE(\hat \beta_1)$, 
+
+donde $t_{n-2;\alpha/2}$ es el valor de una *t-student* con *n-2* grados de libertad que deja una probabilidad de $\alpha/2$ a su derecha.
+
+```{r}
+curve(dt(x,df=198), from = -3, to = 3, xlab = "x", ylab = "t-student con 298 grados de libertad")
+```
+
+$t_{198;0.05/2}$ = 
+
+```{r}
+qt(0.975,198)
+```
+
+Por tanto:
+
+```{r}
+source("02_funciones.R")
+rls_ic(m1,0.05)
+```
+
+En R utilizamos la funcion *confint*:
+
+```{r}
+confint(m2, level = 0.95)
+```
+
+## Contraste de hipotesis
+
+También estamos interesados en resolver preguntas del tipo: $\beta_1 = 0$?
+
+$H_0 : \beta_1 = 0$
+
+$H_1 : \beta_1 \neq 0$
+
+Para ello, utilizamos que $\hat \beta_1$ es una variable aleatoria.
+
+$\hat \beta_1 \sim N \left( \beta_1, SE(\hat \beta_1) \right)$
+
+Suponiendo que $H_0$ es cierta, se cumple:
+
+$t_0 = \frac{\hat \beta_1}{SE(\hat \beta_1)} \sim t_{n-2}$
+
+Si el valor obtenido es muy probable, es que la hipótesis que hemos adoptado es plausible. Esa probabilidad se denomina p-valor.
+
+```{r}
+m1se = rls_se(m1)
+
+t0 = m1$beta1_e/m1se$beta1_se
+
+( pvalor = pt(t0, df = 198, lower.tail = F) )
+```
+
+Por tanto, es muy poco probable que ese valor corresponda a una *t* con 198 grados de libertad, lo que indica que la hipótesis que hemos adoptado no es cierta, luego $\beta_1 \neq 0$.
+
+# Precición del modelo
+
+Habitualmente se utilizan dos varialbes:
+
+## Residual Standard Error (RSE)
+
+Se define como 
+
+$RSE = \sqrt{ \frac{\sum _{i=1}^n (y_i - \hat y)^2}{n-2} } = \sqrt{ \frac{RSS}{n-2} }$
+
+Si recordamos, RSE es una estimación de $\sigma$. Como 
+
+$y_i = \beta_0 + \beta_1 x_i + u_i, \ u_i \sim N(0,\sigma^2)$
+
+cuanto mayor sea $\sigma$, mayor es la variabilidad de los datos con respecto a la recta.
+
+## $R^2$
+
+El problema de RSE es que depende de las unidades de los datos. 
+
+Se puede demostrar que 
+
+$\sum _{i=1}^n (y_i - \bar y)^2 = \sum _{i=1}^n (\hat y_i - \bar y)^2 + \sum _{i=1}^n (y_i - \hat y_i)^2$
+
+VT = VE + VNE (se observa que VNE = RSE)
+
+Se define:
+
+$R^2 = \frac{VE}{VT} = \frac{VT-VNE}{VT} = 1-\frac{VNE}{VT}$
+
+- $R^2 \approx 0$. Los datos se alejan de la recta.
+- $R^2 \approx 1$. Los datos se acercan a la recta.
+
+# Predicción
+
+## Cálculo de la predicción
+
+Para un valor $x_p$, el valor predicho por el modelo es (Predicción puntual):
+
+$\hat y_p = \hat \beta_0 + \hat \beta_1 x_p$
+
+Se puede demostrar que:
+
+$\hat y_p \sim N \left( m_p, \sigma^2v_{pp} \right)$
+
+$m_p = \beta_0 + \beta_1 x_p$
+
+$v_{pp} = \frac{1}{n}\left(1 + \frac{(x_p - \bar x)^2}{s_x^2} \right)$
+
+Por tanto, el Intervalo de Confianza es:
+
+$m_p \in \hat y_p \pm t_{n-2;\alpha/2}*RSE*\sqrt{v_{pp}}$
+
+
+```{r}
+source("02_funciones.R")
+rls_pred(m1,90,0.05)
+```
+
+
+En R:
+
+```{r}
+xp = data.frame(x=90)
+predict(m2, newdata = xp, level = 0.95, interval="confidence")
+```
+
+```{r}
+xp = data.frame(TV = 90)
+predict(m3, newdata = xp, level = 0.95, interval="confidence")
+```
+
+## Precisión de la estimación
+
+Se calcula el *mean squared error*:
+
+$MSE =  \frac{1}{n} \sum \limits _{i=1}^n (y_i - \hat y_i)^2$
+
+```{r}
+yp = predict(m3, newdata = datos)
+n = nrow(datos)
+(MSE = 1/n*sum((y-yp)^2))
+```
+
+Que pasa con la predicción de datos nuevos?
+
+# Diagnosis

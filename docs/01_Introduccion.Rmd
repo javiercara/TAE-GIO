@@ -1,0 +1,116 @@
+---
+title: "01-Introducción"
+author: "Javier Cara"
+date: "11 de septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Qué es statistical learning?
+
+Supongamos que somos consultores contratados por un cliente que quiere analizar como la publicidad mejora las ventas de un producto determinado.
+
+```{r}
+datos = read.csv("Advertising.csv")
+str(datos)
+```
+
+donde:
+
+- sales: ventas del producto en 200 diferentes mercados (en miles de unidades).
+- TV: presupuesto invertido en TV (en miles de dolares).
+- radio: presupuesto invertido en radio (en miles de dolares).
+- newspaper: presupuesto invertido en newspaper (en miles de dolares).
+
+
+```{r}
+par(mfrow=c(1,3))
+plot(datos$TV, datos$sales)
+plot(datos$radio, datos$sales)
+plot(datos$newspaper, datos$sales)
+```
+
+Queremos encontrar la relación entre publicidad y ventas. Proponemos:
+
+$Y = f(X) + \epsilon$
+
+- Y: variable respuesta
+- $X = (X_1,X_2,\ldots,X_p)$: regresores
+- f: función que nos da la relación entre Y - X
+- $\epsilon$: término de error. Se modela como una variable aleatoria independiente de $X$ y con media cero.
+
+Por ejemplo:
+
+```{r}
+plot(datos$TV, datos$sales)
+```
+
+
+```{r}
+m1 = lm(sales ~ TV, data = datos)
+print(m1)
+```
+
+```{r}
+plot(datos$TV, datos$sales)
+abline(m1, col = "red", lwd = 1)
+```
+
+
+Como vemos:
+
+- Y = sales
+- X = TV
+- f(X) = 7.0325 + 0.0475 * X
+- $\epsilon$ : la diferencia entre la recta y los puntos
+
+En esencia, *statistical learning* hace referencia al conjunto de herramientas para estimar $f$.
+
+## Por qué estimar f?
+
+Hay dos razones principales por las que estamos interesados en estimar *f*: 
+
+### Predicción
+
+Como los errores tienen media, vamos a predecir Y mediante:
+
+$\hat Y = \hat f(X)$
+
+donde $\hat f$ refresenta la estimación de $f$.
+
+La precisión de $\hat Y$ depende de dos factores:
+
+- Como de buena es la estimación $\hat f$ de $f$. Se conoce como *error reducible*, porque cuanto mejor sea la estimación de *f*, mejor es la estimación de Y.
+- Incluso si $\hat f(X) = f(X)$ (estimación perfecta), todavía tenemos error $Y - \hat Y = [f(X) - \epsilon] - f(X) = \epsilon$. Se conoce como *error irreducible*, porque el error es inherente al modelo, no se puede actuar sobre este error.
+
+El objetivo de la asignatura es estimar *f* de manera que minimicemos el error reducible.
+
+### Inferencia
+
+Queremos entender la relación entre Y y X. En el ejemplo analizado:
+
+- Que medio contribuye a las ventas?
+- Cual es el que más contribuye?
+
+## Como estimamos f?
+
+Dados unos datos, $(Y,X)$, queremos determinar la relación entre Y y X. Para ello usamos un modelo matemático del tipo:
+
+$Y = f(X) + \epsilon$
+
+### Métodos paramétricos
+
+La función $f(X)$ depende de una serie de parámetros. En el ejemplo anterior:
+
+$Ventas = \beta_0 + \beta_1 * TV + \epsilon$
+
+Este modelo depende de los parámetros $\beta_0, \beta_1$. El objetivo es determinar estos parámetros.
+
+### Métodos no paramétricos
+
+Por ejemplo, árboles de regresión.
