@@ -5,6 +5,7 @@ date: "11 de septiembre de 2018"
 output: 
   html_document:
     number_sections: true
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -26,11 +27,11 @@ Parámetros:
 
 $\beta_0, \beta_1, \sigma^2$
 
-Predicción:
+Hipótesis:
 
-$y_i = \hat \beta_0 + \hat \beta_1 x_i + e_i$
-
-$\hat y_i = \hat \beta_0 + \hat \beta_1 x_i$
+- Normalidad: $u_i \sim Normal \Rightarrow y_i \sim Normal$
+- Varianza de los datos constante (homocedasticidad): $Var(y_i) = \sigma^2$
+- Linealidad: $E(y_i) = \beta_0 + \beta_1 x_i$
 
 # Estimación del modelo
 
@@ -120,13 +121,14 @@ $\hat \beta_1 \pm t_{n-2;\alpha/2} \cdot SE(\hat \beta_1)$,
 donde $t_{n-2;\alpha/2}$ es el valor de una *t-student* con *n-2* grados de libertad que deja una probabilidad de $\alpha/2$ a su derecha.
 
 ```{r}
-curve(dt(x,df=198), from = -3, to = 3, xlab = "x", ylab = "t-student con 298 grados de libertad")
+n = length(y)
+curve(dt(x,df=n-2), from = -3, to = 3, xlab = "x", ylab = "t-student con 298 grados de libertad")
 ```
 
 $t_{198;0.05/2}$ = 
 
 ```{r}
-qt(0.975,198)
+qt(0.975,df=n-2)
 ```
 
 Por tanto:
@@ -165,12 +167,12 @@ m1se = rls_se(m1)
 
 t0 = m1$beta1_e/m1se$beta1_se
 
-( pvalor = pt(t0, df = 198, lower.tail = F) )
+( pvalor = pt(t0, df = n-2, lower.tail = F) )
 ```
 
 Por tanto, es muy poco probable que ese valor corresponda a una *t* con 198 grados de libertad, lo que indica que la hipótesis que hemos adoptado no es cierta, luego $\beta_1 \neq 0$.
 
-# Precición del modelo
+# Precisión del modelo
 
 Habitualmente se utilizan dos varialbes:
 
@@ -185,6 +187,13 @@ Si recordamos, RSE es una estimación de $\sigma$. Como
 $y_i = \beta_0 + \beta_1 x_i + u_i, \ u_i \sim N(0,\sigma^2)$
 
 cuanto mayor sea $\sigma$, mayor es la variabilidad de los datos con respecto a la recta.
+
+```{r}
+# RSE
+m3_sm = summary(m3) # consultar str(m3)
+m3_sm$sigma 
+```
+
 
 ## $R^2$
 
@@ -203,30 +212,36 @@ $R^2 = \frac{VE}{VT} = \frac{VT-VNE}{VT} = 1-\frac{VNE}{VT}$
 - $R^2 \approx 0$. Los datos se alejan de la recta.
 - $R^2 \approx 1$. Los datos se acercan a la recta.
 
+```{r}
+m3_sm$r.squared
+```
+
+
 # Predicción
 
 ## Cálculo de la predicción
 
-Para un valor $x_p$, el valor predicho por el modelo es (Predicción puntual):
+Para un valor $x_p$, el valor **medio** predicho por el modelo es (Predicción puntual):
 
-$\hat y_p = \hat \beta_0 + \hat \beta_1 x_p$
+$\hat m_p = \hat \beta_0 + \hat \beta_1 x_p$
 
 Se puede demostrar que:
 
-$\hat y_p \sim N \left( m_p, \sigma^2v_{pp} \right)$
+$\hat m_p \sim N \left( m_p, \sigma^2v_{pp} \right)$
 
 $m_p = \beta_0 + \beta_1 x_p$
 
 $v_{pp} = \frac{1}{n}\left(1 + \frac{(x_p - \bar x)^2}{s_x^2} \right)$
 
-Por tanto, el Intervalo de Confianza es:
+Por tanto, el **Intervalo de Confianza** es:
 
-$m_p \in \hat y_p \pm t_{n-2;\alpha/2}*RSE*\sqrt{v_{pp}}$
+$m_p \in \hat m_p \pm t_{n-2;\alpha/2}*RSE*\sqrt{v_{pp}}$
 
 
 ```{r}
 source("02_funciones.R")
-rls_pred(m1,90,0.05)
+yp = rls_pred(m1,90,0.05)
+c(yp$mpp,yp$mpp1,yp$mpp2)
 ```
 
 
@@ -242,11 +257,43 @@ xp = data.frame(TV = 90)
 predict(m3, newdata = xp, level = 0.95, interval="confidence")
 ```
 
+Predecimos todos los datos
+
+```{r}
+pred1 = rls_pred(m1,x,0.05)
+plot(x,y)
+abline(a=m1$beta0_e, b=m1$beta1_e)
+points(x,pred1$mpp, col = "red")
+```
+
+También se puede calcular un intervalo para la predicción de nuevos valores de la variable *y*, lo que se conoce como *intervalo de predicción*:
+
+$y_p = \beta_0 + \beta_1 x_p + u_p = m_p + u_p  \Rightarrow$ 
+
+$Var(y_p) = Var(m_p) + Var(u_p) = \sigma^2 + \sigma^2v_{pp} = \sigma^2(1 + v_{pp})$ 
+
+Por tanto, el **Intervalo de Predicción** es:
+
+$\hat y_p \in \hat m_p \pm t_{n-2;\alpha/2}*RSE*\sqrt{1+v_{pp}}$
+
+```{r}
+c(yp$mpp,yp$ypp1,yp$ypp2)
+```
+
+En R:
+
+```{r}
+xp = data.frame(x=90)
+predict(m2, newdata = xp, level = 0.95, interval="prediction")
+```
+
 ## Precisión de la estimación
 
 Se calcula el *mean squared error*:
 
 $MSE =  \frac{1}{n} \sum \limits _{i=1}^n (y_i - \hat y_i)^2$
+
+Esta es una fórmula general, aplicable a todos los modelos. En el caso de regresión simple MSE es similar a RSE$^2$.
 
 ```{r}
 yp = predict(m3, newdata = datos)
@@ -254,6 +301,55 @@ n = nrow(datos)
 (MSE = 1/n*sum((y-yp)^2))
 ```
 
-Que pasa con la predicción de datos nuevos?
-
 # Diagnosis
+
+El modelo de regresión simple se basa en las siguientes hipótesis:
+
+- Normalidad: $u \sim Normal \Rightarrow y_i \sim Normal$
+- Varianza de los datos constante (homocedasticidad): $Var(y_i) = \sigma^2$
+- Linealidad: $E(y_i) = \beta_0 + \beta_1 x_i$
+
+Estas hipótesis se comprueban analizando los residuos:
+
+$e_i = y_i - (\beta_0 + \beta_1 x_i)$
+
+Los residuos en R se calculan con la función *residuals*. Por ejemplo, el gráfico *valores predichos - residuos*:
+
+```{r}
+plot(yp,residuals(m3), xlab = "Fitted values", ylab = "Residuals")
+```
+
+Este gráfico, junto con otros adicionales, se puede obtener con:
+
+```{r}
+par(mfrow=c(2,2))
+plot(m2)
+```
+
+- Normalidad: se comprueba con el gráfico superior derecho. Los residuos se deben ajustar a la recta punteada. 
+- Linealidad: se comprueba con el gráfico superior izquierdo. Los residuos deben distribuirse simétricamente alrededor del eje x. Es equivalente a que la línea roja del gráfico no tenga curvatura.
+- Homocedasticidad: se comprueba con el gráfico superior izquierdo. Los residuos deben tener ancho constante, no pueden aumentar con los valores predichos. 
+
+En este caso no se cumple homocedasticidad. Lo que se hace es utilizar una transformación cóncava de la variable *y* (generalmente log(y) $\sqrt{y}$) :
+
+```{r}
+m4 = lm(sqrt(sales) ~ TV, data = datos)
+par(mfrow=c(2,2))
+plot(m4)
+```
+
+Parece que la raiz cuadrada mejora la hipótesis de homocedasticidad. En cuanto a la bondad del nuevo modelo, apenas cambia
+
+```{r}
+summary(m4)
+```
+
+Igual que el MSE de las predicciones.
+
+
+```{r}
+yp_raiz = predict(m4, newdata = datos)
+n = nrow(datos)
+(MSE = 1/n*sum((y-(yp_raiz)^2)^2))
+```
+

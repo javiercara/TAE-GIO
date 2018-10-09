@@ -1,0 +1,113 @@
+---
+title: "Introducción a la Regresión Lineal"
+author: "Javier Cara"
+date: "Septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+    toc: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Consideremos el siguiente modelo de regresión lineal:
+
+$$
+y_i = 2 + 0.5 x_i + u_i, \ u_i \sim N(0,1)
+$$
+
+Vamos a generar datos con este modelo. Supongamos que:
+
+```{r}
+(x = 1:10)
+```
+
+Generamos los términos aleatorios:
+
+```{r}
+set.seed(12345)
+n = length(x) # numero de datos
+(u1 = rnorm(n, mean = 0, sd = 1))
+```
+
+La variable respuesta correspondiente es:
+
+```{r}
+(y1 = 2 + 0.5*x + u1)
+```
+
+```{r}
+plot(x,y1, col = "red", ylim = c(0,10), pch = 19)
+abline(2,0.5, col = "blue", lty = 2)
+```
+
+Estimamos la recta con los datos:
+
+```{r}
+m1 = lm(y1 ~ x)
+```
+
+Y la dibujamos junto con la recta "teórica" y los datos:
+
+```{r}
+plot(x,y1, col = "red", ylim = c(0,10), pch = 19)
+abline(2,0.5, col = "blue", lty = 2)
+abline(m1, col = "red")
+```
+
+Si repetimos el proceso:
+
+```{r}
+u2 = rnorm(n, mean = 0, sd = 1)
+y2 = 2 + 0.5*x + u2
+m2 = lm(y2 ~ x)
+```
+
+```{r}
+plot(x,y1, col = "red", ylab = "y", ylim = c(0,10), pch = 19)
+points(x,y2, col = "green", pch = 19)
+abline(2,0.5, col = "blue", lty = 2)
+abline(m1, col = "red")
+abline(m2, col = "green")
+```
+
+Si esto lo repetimos muchas veces:
+
+```{r}
+nmuestras = 1000
+beta0 = rep(0, nmuestras)
+beta1 = rep(0, nmuestras)
+for (k in 1:nmuestras){
+  u = rnorm(n, mean = 0, sd = 1)
+  y = 2 + 0.5*x + u
+  m = lm(y ~ x)
+  beta0[k] = m$coefficients["(Intercept)"]
+  beta1[k] = m$coefficients["x"]
+}
+par(mfrow = c(1,2))
+hist(beta0, freq = F)
+curve(dnorm(x, mean = mean(beta0), sd = sd(beta0)), add = T)
+hist(beta1, freq = F)
+curve(dnorm(x, mean = mean(beta1), sd = sd(beta1)), add = T)
+```
+
+```{r}
+c(mean(beta0),sd(beta0))
+```
+
+```{r}
+c(mean(beta1),sd(beta1))
+```
+
+La distribución teórica de los parámetros es:
+
+$$\hat \beta_0 \sim N \left( \beta_0, SE(\hat \beta_0) \right)$$
+
+$$\hat \beta_1 \sim N \left( \beta_1, SE(\hat \beta_1) \right)$$
+
+```{r}
+summary(m1)
+```
+

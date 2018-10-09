@@ -1,0 +1,92 @@
+---
+title: "Bootstrap"
+author: "Javier Cara"
+date: "Septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducción al bootstrap
+
+Datos tomados de (http://college.cengage.com/mathematics/brase/understandable_statistics/7e/students/datasets/)
+
+Fasting Glucose Blood Tests
+---------------------------------------------------------------
+The following data represents glucose blood level (mg/100ml) after a 12 hour fast for a random sample of 70 women. Reference: American J. Clin. Nutr. Vol. 19, 345-351
+
+```{r}
+datos = read.csv("svls05.csv", header=T)
+str(datos)
+```
+
+Por comodidad, guardamos los datos en una variable nueva:
+
+```{r}
+glucosa = datos$GLUCOSE
+hist(glucosa)
+```
+
+El nivel medio de glucosa es:
+```{r}
+mean(glucosa)
+```
+
+
+Si solo tuviésemos una muestra de 10 datos, hubiésemos obtenido:
+
+```{r}
+ndatos = 10
+set.seed(99) # semilla para los numeros aleatorios
+muestra1 = sample(glucosa,ndatos,replace = F) # muestreo sin reemplazamiento
+mean(muestra1)
+```
+
+¿Con qué precisión hemos estimado la media? En teoría
+
+$$
+SE(media) = \frac{\sigma}{\sqrt{n}}
+$$
+
+```{r}
+var_n = var(muestra1)*(ndatos-1)/ndatos # varianza dividiendo por n, y no por (n-1)
+sqrt(var_n/ndatos)
+```
+
+Para comprobarlo podemos seleccionar muchas muestras de 10 datos y calcular:
+
+```{r}
+nmuestras = 1000
+media_M = rep(0, nmuestras)
+for (n in 1:nmuestras){
+  muestra_n = sample(glucosa,ndatos,replace = F) # muestreo sin reemplazamiento
+  media_M[n] = mean(muestra_n)
+}
+hist(media_M)
+```
+
+```{r}
+sd(media_M)
+```
+
+Como solo tenemos una (muestra1), muestreamos con reemplazamiento (bootstrap)
+```{r}
+nB = 10000
+media_B = rep(0, nB)
+for (n in 1:nB){
+  muestra_B = sample(muestra1,ndatos,replace = T) # muestreo sin reemplazamiento
+  media_B[n] = mean(muestra_B)
+}
+```
+
+```{r}
+c(sd(media_M),sd(media_B))
+```
+
+En este caso, la estimación del SE es mejor con bootstrap que con la fórmula teórica.

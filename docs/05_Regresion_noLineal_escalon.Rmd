@@ -1,0 +1,67 @@
+---
+title: "Regresión no Lineal: función escalón"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Metodo
+
+- Se divide el rango de *X* 
+
+# Introducción
+
+Datos: Wage
+
+Wage and other data for a group of 3000 male workers in the Mid-Atlantic region.
+
+```{r}
+library(ISLR)
+datos = Wage
+datos = datos[datos$wage<250,]
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey")
+```
+
+
+
+```{r}
+head(cut(datos$age,4), 20)
+```
+
+El resultado de cut() es un factor.
+
+```{r}
+class(cut(datos$age,4))
+```
+
+Se estima el modelo de regresión. *lm()* se encarga de crear las variables necesarias:
+
+```{r}
+m_esc = lm(wage ~ cut(age,4), data = datos)
+summary(m_esc)
+```
+
+```{r}
+age_grid = seq(from = min(datos$age), to = max(datos$age), by = 1)
+yp = predict(m_esc, newdata = data.frame(age = age_grid), se = TRUE)
+yp1 = yp$fit - 2*yp$se.fit
+yp2 = yp$fit + 2*yp$se.fit
+```
+
+```{r}
+plot(wage ~ age, data = datos, xlim = range(age), cex = 0.5, col = "darkgrey")
+title("Funcion escalon")
+lines(age_grid, yp$fit, lwd = 2, col = "blue")
+lines(age_grid, yp1, col = "blue", lty = 3)
+lines(age_grid, yp2, col = "blue", lty = 3)
+```

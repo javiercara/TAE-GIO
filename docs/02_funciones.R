@@ -50,18 +50,31 @@ rls_ic <- function(m,alfa){
 rls_pred <- function(m,xp,alfa){
   # predicción en regresion lineal simple
   # m: modelo estimado con rls
-  
-  yp = m$beta0_e + m$beta1_e*xp
+  # xp puede ser un vector
   
   n = length(m$x)
+  np = length(xp) # numero de valores predichos
   RSE = m$sigma_e
   ta = qt(1-alfa/2,n-2)
   sx2 = sum( (x-mean(x))^2 )/n
-  vpp = 1/n*(1+(xp - mean(x))^2/sx2)
-  mp1 = yp - ta*RSE*sqrt(vpp)
-  mp2 = yp + ta*RSE*sqrt(vpp)
   
-  salida = list(xp = xp, yp = yp, yp_ic = c(mp1,mp2))
+  # prediccion puntual
+  mpp = m$beta0_e + m$beta1_e*xp
+  
+  # Intervalos de confianza
+  mpp1 = rep(0,np) # reservamos memoria
+  mpp2 = rep(0,np)
+  ypp1 = rep(0,np)
+  ypp2 = rep(0,np)
+  for (k in 1:np){
+    vpp = 1/n*(1+(xp[k] - mean(x))^2/sx2)
+    mpp1[k] = mpp[k] - ta*RSE*sqrt(vpp)
+    mpp2[k] = mpp[k] + ta*RSE*sqrt(vpp)
+    ypp1[k] = mpp[k] - ta*RSE*sqrt(1+vpp)
+    ypp2[k] = mpp[k] + ta*RSE*sqrt(1+vpp)
+  }
+  
+  salida = list(xp = xp, mpp = mpp, mpp1 = mpp1, mpp2 = mpp2, ypp1 = ypp1, ypp2 = ypp2 )
   
   return(salida)
   

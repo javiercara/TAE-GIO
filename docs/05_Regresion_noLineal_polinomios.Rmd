@@ -1,0 +1,128 @@
+---
+title: "Regresión no Lineal: polinomios"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducción
+
+Datos: Wage
+
+Wage and other data for a group of 3000 male workers in the Mid-Atlantic region.
+
+```{r}
+library(ISLR)
+datos = Wage
+str(datos)
+```
+
+```{r}
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey")
+```
+
+Parece que hay dos grupos diferenciados: los que ganan más de 250.000$ y los que ganan menos. Vamos a trabajar con los que ganan menos
+
+```{r}
+datos = datos[datos$wage<250,]
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey")
+```
+
+# Regresión polinómica
+
+Modelo:
+
+$$
+y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \beta_3 x_i^3 + \cdots + \beta_d x_i^d + u_i
+$$
+
+- el modelo se estima con mínimos cuadrados, utilizando como regresores: $x_i, x_i^2, x_i^3, \cdots, x_i^d$.
+- todas las cuestiones de inferencia estudiadas en el tema de regresión lineal son válidas aquí también.
+
+Hay varias maneras de implementarlos en R:
+
+```{r}
+m1 = lm(wage ~ age + I(age^2) + I(age^3) + I(age^4), data = datos)
+summary(m1)
+```
+
+```{r}
+m2 = lm(wage ~ cbind(age, age^2, age^3, age^4), data = datos)
+summary(m2)
+```
+
+```{r}
+m3 = lm(wage ~ poly(age, degree = 4, raw = T), data = datos)
+summary(m3)
+```
+
+Vamos a dibujar la curva y los intervalos de confianza (95% = 2*SE):
+
+```{r}
+age_grid = seq(from = min(datos$age), to = max(datos$age), by = 1)
+yp = predict(m1, newdata = data.frame(age = age_grid), se = TRUE)
+yp1 = yp$fit - 2*yp$se.fit
+yp2 = yp$fit + 2*yp$se.fit
+```
+
+```{r}
+plot(wage ~ age, data = datos, xlim = range(age), cex = 0.5, col = "darkgrey")
+title("Polinomio de grado 4")
+lines(age_grid, yp$fit, lwd = 2, col = "blue")
+lines(age_grid, yp1, col = "blue", lty = 3)
+lines(age_grid, yp2, col = "blue", lty = 3)
+```
+
+# Selección del grado máximo del polinomio
+
+## Usando best-subset, forward-stepwise o backward-stepwise
+
+```{r}
+library(leaps)
+grado_max = 10
+m_best = regsubsets(wage ~ poly(age, degree = grado_max), data = datos, nvmax = grado_max)
+m_best_summary = summary(m_best)
+plot(m_best_summary$adjr2, xlab = "Grado del polinomio", ylab = "R2 ajustado", type = "b")
+```
+
+
+## Usando subconjunto de validación o cross-validation
+
+```{r}
+source("cross_val_pos.R")
+source("regsubsets_predict.R")
+source("MSE.R")
+
+# datos de los folds
+num_folds = 10
+set.seed(1)
+pos = cross_val_pos(nrow(datos),num_folds)
+
+mse_cv = matrix(0, nrow = num_folds, ncol = grado_max)
+for (i in 1:num_folds){
+  # datos de training y de validation de cada fold
+  datos_train = datos[pos$train[[i]],]
+  datos_test = datos[pos$test[[i]],]
+  
+  m_cv = regsubsets(wage ~ poly(age, degree = grado_max), data = datos, nvmax = grado_max)
+  
+  for (j in 1:grado_max){
+    pred = predict(m_cv, newdata = datos_test, id = j)
+    mse_cv[i,j] = MSE(datos_test$wage,pred)
+  }
+}
+
+mse_cv_med = apply(mse_cv, 2, mean)
+plot(mse_cv_med, type = "b")
+```
+

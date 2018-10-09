@@ -1,0 +1,332 @@
+---
+title: "Selección de Variables en modelos lineales"
+author: "Javier Cara"
+date: "Septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducción
+
+```{r}
+library(ISLR)
+datos = Hitters
+str(datos)
+```
+
+Comprobamos si hay missing obsevations (NA) en el salario:
+
+```{r}
+sum(is.na(datos$Salary))
+```
+
+Eliminamos estos datos:
+
+```{r}
+datos = na.omit(datos)
+```
+# Variables no significativas
+
+```{r}
+m1 = lm(Salary ~ ., data = datos)
+summary(m1)
+```
+
+Este análisis nos qué variables son significativas en el análisis de *Salary* en función del resto de variables. Pero quedarnos con el modelo que contiene las variables significativas no nos garantiza que sea el mejor modelo para predecir. 
+
+# Best subset selection
+
+Algoritmo:
+
+Para k = 1, 2, ..., p:
+
+- Estimar todos los modelos de *k* regresores (hay $\binom{p}{k}$ modelos posibles).
+- Elegir el que tenga menor RSS o mayor R$^2$. Este será el modelo M$_{k}$.
+
+
+```{r}
+library(leaps)
+m2 = regsubsets(Salary ~ ., data = datos)
+summary(m2)
+```
+
+El resultado son los mejores 8 modelos (por defecto): 
+
+- la primera línea es el mejor modelo (en términos de R$^2$) de una variable. La variable seleccionada es la que aparece con un asterisco, **CRBI**.
+- la segunda linea es el mejor modelo (en términos de R$^2$) de dos variables, **Hits** y **CRBI**.
+- y así sucesivamente.
+
+Podemos seleccionar el numero de modelos que nos devuelve con *nvmax*:
+
+```{r}
+m_best = regsubsets(Salary ~ ., data = datos, nvmax = 19)
+summary(m_best)
+```
+
+Dentro de cada nivel (es decir, manteniendo fijo el número de variables), se elige la combinación de variables que obtiene el mayor R$^2$. Pero nosotros queremos el modelo que obtiene el menor *test error*. Podemos calcular el test error de dos maneras:
+
+- Diréctamente, utilizando *subconjuntos de validation* o *cross-validation*.
+- Indirectamente, mediante las métricas Cp, AIC, BIC or R$^2$ ajustado.
+
+$$
+Cp = \frac{1}{n}(RSS + 2d\hat{\sigma}^2)
+$$
+
+$$
+AIC = \frac{1}{n\hat{\sigma}^2}(RSS + 2d\hat{\sigma}^2)
+$$
+
+Cp y AIC son proporcionales, $C_p = AIC \hat{\sigma}^2$.
+
+$$
+BIC = \frac{1}{n}(RSS + \log(n)d\hat{\sigma}^2)
+$$
+
+$$
+R^2-ajustado = 1 - \frac{RSS/(n-d-1)}{TSS/(n-1)}
+$$
+
+donde:
+
+- d: número de regresores.
+- $\hat{\sigma}^2$: estimación del error del modelo. En regresión simple es $RSS/(n-2)$.
+- RSS: Residual sum of squares
+
+$$
+RSS = \sum _{i=1}^n(y_i - \hat{y}_i)^2
+$$
+
+- TSS: Total Sum of Squares
+
+$$
+TSS = \sum _{i=1}^n(y_i - \bar{y}_i)^2
+$$
+
+
+En R, estas métricas están se pueden obtener de la siguiente manera:
+
+```{r}
+m_best_summary = summary(m_best)
+names(m_best_summary)
+```
+
+
+```{r}
+plot(m_best_summary$adjr2, xlab = "Numero de variables", ylab = "R2 ajustado", type = "l")
+```
+
+Buscamos el máximo:
+
+```{r}
+which.max(m_best_summary$adjr2)
+```
+
+Si utilizamos el criterio del Cp:
+
+```{r}
+plot(m_best_summary$cp, xlab = "Numero de variables", ylab = "R2 ajustado", type = "l")
+```
+
+```{r}
+which.min(m_best_summary$cp)
+```
+
+Justificación: el RSS disminuye con el número de regresores *d*. Por eso penalizamos incluyendo un término que contiene a *d*.
+
+Los coeficinetes estimados con ese modelo son:
+
+```{r}
+coef(m_best,10)
+```
+
+
+# Método Forward-Stepwise
+
+Algoritmo:
+
+1. M0 es el modelo sin regresores.
+2. Para k = 0, ..., (p-1)
+    a. A partir del modelo con *k* regresores, M$_k$, estimar todos los modelos posibles con (k+1) regresores.
+    b. Elegir el que tenga menor RSS o mayor R$^2$. Este será el modelo M$_{k+1}$.
+3. Elegir el mejor modelo de M0, ..., M$_{p}$ utilizando validación cruzada, Cp, AIC, BIC, R2-ajustado.
+
+Se puede utilizar la función *regsubsets()*
+
+```{r}
+m_fwd = regsubsets(Salary ~ ., data = datos, nvmax = 19, method = "forward")
+summary(m_fwd)
+```
+
+```{r}
+m_fwd_summary = summary(m_fwd)
+which.min(m_fwd_summary$cp)
+```
+
+```{r}
+coef(m_fwd,10)
+```
+
+
+# Método Backward-Stepwise
+
+Algoritmo:
+
+1. Mp es el modelo con todos los regresores.
+2. Para k = p, ..., 1
+    a. A partir del modelo con *k* regresores, M$_k$, estimar todos los modelos posibles con (k-1) regresores.
+    b. Elegir el que tenga menor RSS o mayor R$^2$. Este será el modelo M$_{k-1}$.
+3. Elegir el mejor modelo de M0, ..., M$_{p}$ utilizando validación cruzada, Cp, AIC, BIC, R2 ajustado.
+
+Se puede utilizar la función *regsubsets()*
+
+```{r}
+m_bwd = regsubsets(Salary ~ ., data = datos, nvmax = 19, method = "backward")
+summary(m_bwd)
+```
+
+```{r}
+m_bwd_summary = summary(m_bwd)
+which.min(m_bwd_summary$cp)
+```
+
+```{r}
+coef(m_bwd,10)
+```
+
+Es el mismo que antes.
+
+# Eligiendo el mejor modelo utilizando subconjuntos de validación
+
+
+```{r}
+set.seed(1)
+n = nrow(datos)
+n_train = round(n/2)
+n_test = n - n_train
+
+v = 1:n
+pos_train = sample(v,n_train,replace = F) # muestreo sin reemplazamiento
+pos_test = v[-pos_train]
+
+# dividimos los datos en training set y validation set
+datos_train = datos[pos_train,]
+datos_test = datos[pos_test,]
+```
+
+Estimamos todos los modelos posibles con los datos de entrenamiento
+
+```{r}
+m_val = regsubsets(Salary ~ ., data = datos_train, nvmax = 19)
+```
+
+Vamos a predecir con los datos de test. Como no existe la funcion predecir para este tipo de modelos, la construimos nosotros:
+
+```{r}
+X_train = model.matrix(Salary ~ ., data = datos_test)
+```
+
+```{r}
+source("MSE.R")
+mse_val = rep(0,19)
+for (i in 1:19){
+  coef_i = coef(m_val,i)
+  pred_i = X_train[,names(coef_i)] %*% coef_i
+  mse_val[i] = MSE(datos_test$Salary,pred_i)
+}
+which.min(mse_val)
+```
+
+Para calcular los coeficientes del modelo de regresión finales, es preferible hacerlo con todos los datos:
+
+```{r}
+m_val_final = regsubsets(Salary ~ ., data = datos, nvmax = 19)
+coef(m_val_final,8)
+```
+
+Funcion para predecir:
+
+```{r}
+predict.regsubsets = function(objeto_regsubsets, newdata, id){
+  formu = as.formula(objeto_regsubsets$call[[2]])
+  X_mat = model.matrix(formu,newdata)
+  coefi = coef(objeto_regsubsets, id)
+  X_col = names(coefi)
+  pred = X_mat[,X_col] %*% coefi
+  return(pred)
+}
+```
+```{r}
+head(predict.regsubsets(m_val_final,datos,8))
+```
+
+Tambien funciona con *predict()*
+
+```{r}
+head(predict(m_val_final,datos,8))
+```
+
+# Eligiendo el mejor modelo utilizando Cross-Validation
+
+Función para obtener las posiciones de train y de test:
+
+```{r}
+source("cross_val_pos.R")
+```
+
+
+Datos de los folds:
+
+```{r}
+num_folds = 10
+set.seed(1)
+pos = cross_val_pos(nrow(datos),num_folds)
+```
+
+
+
+```{r}
+mse_cv = matrix(0, nrow = num_folds, ncol = 19)
+for (i in 1:num_folds){
+  # datos de training y de validation de cada fold
+  datos_train = datos[pos$train[[i]],]
+  datos_test = datos[pos$test[[i]],]
+  
+  m_cv = regsubsets(Salary ~ .,data = datos_train, nvmax = 19)
+  
+  for (j in 1:19){
+    pred = predict(m_cv,newdata = datos_test, id = j)
+    mse_cv[i,j] = MSE(datos_test$Salary,pred)
+  }
+}
+```
+
+```{r}
+mse_cv_med = apply(mse_cv, 2, mean)
+plot(mse_cv_med, type = "b")
+```
+
+El que tiene menor error es el de 11 variables. Lo aplicamos a todos los datos:
+
+```{r}
+m_cv_final = regsubsets(Salary ~ ., data = datos, nvmax = 19)
+coef(m_cv_final,11)
+```
+
+
+
+
+
+
+
+
+
+

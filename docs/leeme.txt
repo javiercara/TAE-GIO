@@ -1,0 +1,3 @@
+- el bootstrap no lo han entendido, el problema es que no entienden la distribución el muestreo. Empezar el curso con repaso de inferencia mediante simulaciones
+- en regresión simple hacer solo una funcion con R, la de la estimacion de beta0 y beta1. Las otras quitan tiempo y  no aportan nada
+- quitar la introduccion actual y que sea una introduccion de inferencia

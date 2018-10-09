@@ -1,0 +1,196 @@
+---
+title: "Regresión Lineal Multiple"
+author: "Javier Cara"
+date: "Septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Modelo
+
+Datos:
+
+$(y_i,x_{1i},x_{2i},\cdots,x_{ni}), i = 1,\ldots,n$
+
+Modelo:
+
+$y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_k x_{ki} + u_i, \ u_i \sim N(0,\sigma^2)$
+
+Parámetros: 
+
+$\beta_0, \beta_1, \beta_2, \cdots, \beta_k, \sigma^2$
+
+Hipótesis:
+
+- Normalidad: $u_i \sim Normal \Rightarrow y_i \sim Normal$
+- Varianza de los datos constante (homocedasticidad): $Var(y_i) = \sigma^2$
+- Linealidad: $E(y_i) = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_k x_{ki}$
+
+# Estimación del modelo
+
+Vamos a utilizar un método que se denomina mínimos cuadrados.
+
+```{r}
+datos = read.csv("Advertising.csv")
+str(datos)
+```
+
+Se define la *suma de residuos al cuadrado* o *residual sum of squares* (RSS):
+
+$RSS = \sum \limits _{i=1}^n e_i^2$
+
+donde $e_i = y_i - (\hat \beta_0 + \hat \beta_1 x_{1i} + \hat \beta_2 x_{2i} + \cdots + \hat \beta_k x_{ki})$
+
+El metodo de minimos cuadrados minimiza esta cantidad.
+
+$\frac{\partial RSS}{\partial \hat \beta_i} = 0 \Rightarrow \hat \beta_i$
+
+$\hat \sigma ^2 = \frac{\sum _{i=1}^n (y_i - \hat y)^2}{n-k-1} = \frac{RSS}{n-k-1}$
+
+Esos parámetros los podemos calcular con R:
+
+```{r}
+m1 = lm(sales ~ TV + radio + newspaper, data = datos)
+summary(m1)
+```
+
+- $\hat \beta_0$ = 2.94. Como p-valor < $\alpha$, es un parámetro significativo.
+- $\hat \beta_1$ = 0.05. Si mantenemos la inversión en *radio* y *newspaper* constante, un incremento de 1000 $ en TV, por término medio supone un aumento en las ventas de 0.05*1000 = 50 unidades. Según el pvalor, es un parámetro significativo.
+- $\hat \beta_2$ = 0.19. Si mantenemos la inversión en *TV* y *newspaper* constante, un incremento de 1000 $ en TV, por término medio supone un aumento en las ventas de 190 unidades. Según el pvalor, es un parámetro significativo.
+- $\hat \beta_3$ = -0.001. Según el pvalor, es un parámetro **NO** significativo, luego no influye en las ventas. Sin embargo, si analizamos la regresión simple de *newspaper*:
+
+
+```{r}
+m2 = lm(sales ~ newspaper, data = datos)
+summary(m2)
+```
+
+Parece un resultado contradictorio. Esto es debido a la correlación entre *radio* y *newspaper*:
+
+```{r}
+cor(datos[,-1])
+```
+
+Como vemos, la correlación entre radio y newspaper es 0.35, lo que indica que en los mercados donde se invierte en *radio* también se invierte en *newspaper*. 
+
+# Intervalos de confianza
+
+```{r}
+confint(m1, level = 0.99)
+```
+
+# Contraste general de regresión
+
+Existe un contraste que nos informa si existe relación entre la variable respuesta y los regresores.
+
+$H_0 : \beta_1 = \beta_2 = \cdots = \beta_k = 0$
+
+$H_1 : \text{al menos un } \beta_j \text{ es distinto de cero}$
+
+Este contraste se resuelve utilizando el estadístico F. El valor de este estadístico y el pvalor se pueden consultar en la tabla obtenida conla función *summary()*
+
+```{r}
+summary(m1)
+```
+
+Como pvalor < $\alpha$, se rechaza la hipótesis nula, luego hay algún regresor distinto de cero, luego hay relación entre *sales* y los regresores.
+
+# Precisión del modelo
+
+Residual standard error RSE:
+
+```{r}
+m1_sm = summary(m1)
+m1_sm$sigma
+```
+
+Como vemos, disminuye con respecto a la regresión simple.
+
+R cuadrado:
+
+```{r}
+m1_sm$r.squared
+```
+
+R cuadrado ajustado (mejor para regresión simple):
+
+```{r}
+m1_sm$adj.r.squared
+```
+
+Este valor también ha mejorado considerablemente.
+
+# Predicción
+
+Valor medio predicho - intervalo de confianza del valor medio predicho:
+
+```{r}
+xp = data.frame(TV = 50, radio = 40, newspaper = 60)
+predict(m1, newdata = xp, level = 0.95, interval="confidence")
+```
+
+Valor medio predicho - intervalo de predicción:
+
+```{r}
+predict(m1, newdata = xp, level = 0.95, interval="prediction")
+```
+
+# Hipótesis del modelo
+
+```{r}
+par(mfrow=c(2,2))
+plot(m1)
+```
+
+Como vemos, no se cumple linealidad. Una solución simple consiste en usar transformaciones no-lineales de las X. Las más comunes son: $\log(X), \sqrt{X}, X^2$.
+
+Podemos comprobar que ninguna de ellas corrige la linealidad:
+
+```{r}
+m3 = lm(sales ~ TV + radio + newspaper + I(TV^2), data = datos)
+par(mfrow=c(2,2))
+plot(m3)
+```
+
+# Extensiones del modelo lineal
+
+## Términos de interacción
+
+```{r}
+m4 = lm(sales ~ TV * radio + newspaper, data = datos)
+summary(m4)
+```
+
+El modelo mejora considerablemente el R$^2$. Luego invertir dinero en *radio* también mejora la inversión en *TV*.
+
+$sales = \beta_0 + \beta_1*TV + \beta_2*radio + \beta_3*newspaper + \beta_4*TV*radio + u$
+
+$sales = \beta_0 + (\beta_1 + \beta_4*radio)*TV + \beta_2*radio + \beta_3*newspaper  + u$
+
+La linealidad también ha mejorado:
+
+```{r}
+par(mfrow=c(2,2))
+plot(m4)
+```
+
+## Términos no lineales
+
+```{r}
+m5 = lm(sales ~ TV * radio + newspaper + I(TV^2), data = datos)
+summary(m5)
+```
+
+Este es el mejor modelo. Comprobamos los residuos:
+
+```{r}
+par(mfrow=c(2,2))
+plot(m5)
+```

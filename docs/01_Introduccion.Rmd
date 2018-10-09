@@ -27,6 +27,7 @@ donde:
 - radio: presupuesto invertido en radio (en miles de dolares).
 - newspaper: presupuesto invertido en newspaper (en miles de dolares).
 
+(datos tomados de http://www-bcf.usc.edu/~gareth/ISL/data.html)
 
 ```{r}
 par(mfrow=c(1,3))

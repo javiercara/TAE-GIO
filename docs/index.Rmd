@@ -7,8 +7,26 @@ output: html_document
 
 <br>
 
-Contenido:
+# Bibliografía
+
+```{r pressure, echo=FALSE, fig.cap=" ", out.width = '15%'}
+knitr::include_graphics("ISLCover.jpg")
+```
+
+<br>
+
+# Contenido
 
 1. [Introducción](01_Introduccion.html)
-2. [Regresión Lineal Simple](02_Regresion_Lineal_Simple.html)
-    - [Funciones en R](02_funciones.R)
+2. Regresión Lineal
+    i. [Regresión Lineal Simple](02_Regresion_Lineal_Simple.html)
+    iii. [Regresión Lineal Múltiple](02_Regresion_Lineal_Multiple.html)
+    iv. [Variables Cualitativas](02_Variables_Cualitativas.html)
+3. Técnicas de remuestreo
+    i. [Bootstrap](03_Bootstrap.html)
+    ii. [Cross-Validation](03_Cross_Validation.html)
+4. Importancia de Variables
+    i. [Selección de variables](04_Seleccion_Variables.html)
+5. Regresión no-lineal
+    i. [Polinomios](05_Regresion_noLineal_polinomios.html)
+    ii. [Función escalón](05_Regresion_noLineal_escalon.html)

@@ -1,0 +1,83 @@
+---
+title: "Regresión Lineal Simple"
+author: "Javier Cara"
+date: "11 de septiembre de 2018"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Modelo
+
+$$y_i = \beta_0 + \beta_1 x_i + u_i, \ u_i \sim N(0,\sigma^2)$$
+
+# Precisión de los estimadores
+
+## Teorica
+
+$$\hat \beta_1 \sim N \left( \beta_1, SE(\hat \beta_1) \right)$$
+
+$$SE(\hat \beta_1) = \frac{\sigma^2}{ns_x^2}$$
+
+
+
+```{r}
+datos = read.csv("Advertising.csv")
+```
+
+```{r}
+m = lm(sales ~ TV, data = datos)
+summary(m)
+```
+
+## Con bootstrap
+
+```{r}
+ndatos = nrow(datos)
+nB = 1000
+beta0_B = rep(0, nB)
+beta1_B = rep(0, nB)
+for (n in 1:nB){
+  muestraB = sample(1:ndatos,ndatos,replace = T) # muestreo con reemplazamiento
+  datosB = datos[muestraB,]
+  mB = lm(sales ~ TV,data = datosB)
+  beta0_B[n] = mB$coef[1]
+  beta1_B[n] = mB$coef[2]
+}
+hist(beta1_B)
+```
+
+```{r}
+sd(beta1_B)
+```
+
+# Intervalos de confianza
+
+## Teóricos
+
+$$\hat \beta_1 \pm t_{n-2;\alpha/2} \cdot SE(\hat \beta_1)$$
+
+```{r}
+confint(m)
+```
+
+## Con bootstrap
+
+```{r}
+quantile(beta1_B,probs = c(0.025,0.975))
+```
+
+## Intervalos de confianza en la predicción
+
+```{r}
+plot(datos$TV, datos$sales)
+for (b in 1:nB){
+  abline(beta0_B[b],beta1_B[b])
+}
+```
+
