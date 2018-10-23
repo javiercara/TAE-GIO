@@ -1,11 +1,14 @@
 ---
 title: "Regresión Lineal Simple"
 author: "Javier Cara"
-date: "11 de septiembre de 2018"
+date: "Curso 2018-19"
 output: 
   html_document:
     number_sections: true
     toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
@@ -61,7 +64,7 @@ $\hat \sigma ^2 = \frac{\sum _{i=1}^n (y_i - \hat y)^2}{n-2} = \frac{RSS}{n-2}$
 Esos parámetros los podemos calcular creando una función:
 
 ```{r}
-source("02_funciones.R")
+source("rls.R")
 x = datos$TV
 y = datos$sales
 m1 = rls(y,x)
@@ -90,8 +93,6 @@ plot(datos$TV, datos$sales, xlab = "TV", ylab = "Sales", col = "red", pch = 20)
 abline(m2, col="blue", lwd = 1)
 ```
 
-
-
 # Precisión de los coeficientes estimados
 
 Los estimadores de los coeficientes son variables aleatorias. Se puede demostrar que:
@@ -107,9 +108,14 @@ $SE(\hat \beta_0) = \frac{\sigma^2}{n}\left(1 + \frac{\bar x^2}{s_x^2} \right)$
 $SE(\hat \beta_1) = \frac{\sigma^2}{ns_x^2}$
 
 ```{r}
-source("02_funciones.R")
-rls_se(m1)
+m3_summary = summary(m3)
+names(m3_summary)
 ```
+
+```{r}
+m3_summary$coefficients[,"Std. Error"]
+```
+
 
 
 ## Intervalos de confianza

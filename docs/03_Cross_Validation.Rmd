@@ -7,6 +7,8 @@ output:
     number_sections: true
     toc: true
     toc_float: true
+    theme: flatly
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
@@ -15,14 +17,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introducción
 
-El problema es que el modelo se ajusta muy bien a los datos que hemos utilizado para estimarlo, luego es razonable pensar que va a predecir bien dichos datos. Pero en la práctica, queremos el modelo para predecir datos que no conocemos. El objetivo es analizar el modelo frente a datos no conocidos.
+El problema es que el modelo se ajusta muy bien a los datos que hemos utilizado para estimarlo, luego es razonable pensar que va a predecir bien dichos datos. Pero en la práctica, queremos el modelo para predecir datos que no conocemos. El objetivo es analizar la predicción del modelo frente a datos no conocidos.
 
 
 # El método del subconjunto de validación (validation set approach)
 
 - Dividimos en dos partes los datos (50%-50%, 40%-60%,...).
 - En el **training set** estimamos el modelo.
-- En el **validation set** (también conocido como **test set**) predecimos la respuesta y calculamos el Mean Squared Error (MSE) entre la variable respuesta observada y la predicha.
+- En el **test set** (**validation set**) predecimos la respuesta y calculamos el Mean Squared Error (MSE) entre la variable respuesta observada y la predicha.
 
 $$
 MSE = \frac{1}{n}\sum _{i=1}^{n}{(y_i - \hat y_i)^2}
@@ -33,51 +35,52 @@ datos = read.csv("Advertising.csv")
 str(datos)
 ```
 
-- Dividimos los datos en training set y validation set:
+- Dividimos los datos en training set y test set:
 
 ```{r}
 n = nrow(datos)
-n_tr = 100
-n_va = n - n_tr
+n_train = 100
+n_test = n - n_train
 ```
 
 ```{r}
 set.seed(115)
 
 v = 1:n
-pos_tr = sample(v,n_tr,replace = F) # muestreo sin reemplazamiento
-pos_va = v[-pos_tr]
+pos_train = sample(v, n_train, replace = F) # muestreo sin reemplazamiento
+pos_test = v[-pos_train]
 
 # dividimos los datos en training set y validation set
-datos_tr = datos[pos_tr,]
-datos_va = datos[pos_va,]
+datos_train = datos[pos_train,]
+datos_test = datos[pos_test,]
 
-plot(datos_tr$TV, datos_tr$sales, pch = 19, col = "blue")
-points(datos_va$TV, datos_va$sales, pch = 19, col = "red")
-legend(x=0,y=25, legend=c("training","validation"), fill=c("blue","red"))
+plot(datos_train$TV, datos_train$sales, pch = 19, col = "blue")
+points(datos_test$TV, datos_test$sales, pch = 19, col = "red")
+legend(x=0,y=25, legend=c("train","test"), fill=c("blue","red"))
 ```
 
 - En el training set estimamos el modelo:
 
 ```{r}
-m1 = lm(sales ~ TV, data = datos_tr)
+m1 = lm(sales ~ TV, data = datos_train)
 
 # error en el training set
-y_tr = datos_tr$sales
-y_tr_p = predict(m1,datos_tr)
+y_train = datos_train$sales
+y_train_p = predict(m1,datos_train)
 ```
 
 - Error en el validation set calculamos el MSE:
 
 ```{r}
 source("MSE.R")
+MSE # se muestra la definición de la funcion
 ```
 
 ```{r}
-y_va = datos_va$sales
-y_va_p = predict(m1,datos_va)
+y_test = datos_test$sales
+y_test_p = predict(m1,datos_test)
 
-(mse_va = MSE(y_va,y_va_p))
+(mse_test = MSE(y_test,y_test_p))
 ```
 
 
@@ -113,12 +116,12 @@ $$
 ```{r}
 error_i = rep(0,n)
 for (i in 1:n){
-  datos_tr = datos[-i,]
-  datos_va = datos[i,]
-  mi = lm(sales ~ TV, data = datos_tr)
+  datos_train = datos[-i,]
+  datos_test = datos[i,]
+  mi = lm(sales ~ TV, data = datos_train)
   
-  yi = datos_va$sales
-  yi_p = predict(mi,datos_va)
+  yi = datos_test$sales
+  yi_p = predict(mi,datos_test)
   
   error_i[i] = MSE(yi,yi_p)
 }
@@ -131,14 +134,14 @@ lines(error_i_media*rep(1,n),col='red')
 ```
 
 
-# k-fold Cross Validation
+# k-fold Cross-Validation
 
 Se divide aleatoriamente los datos en **k** partes (o folds). Cada parte tiene n1 = n/k datos.
 
 - Para  i = 1:k
     - la parte i constituye el test set.
     - las otras partes constituyen el train set.
-    - se calcula el MSEk
+    - se calcula el MSE(i)
 - El error total es:
 
 $$
@@ -148,48 +151,36 @@ $$
 
 ```{r}
 # numero de folds
-k_folds = 5
+num_folds = 5
 n = nrow(datos)
-n1 = trunc(n/k_folds)
-pos0 = 1:n
-# lista vacia
-pos = list()
-set.seed(342)
-for (k in 1:(k_folds-1)){
-  vk = sample(1:length(pos0),n1,replace = F)
-  # guardamos las posiciones del fold-k
-  pos[[k]] = pos0[vk]
-  # eliminamos esas posiciones
-  pos0 = pos0[-vk]
-}
-# el ultimo puede tener mas datos que n1
-pos[[k_folds]] = pos0
+n1 = trunc(n/num_folds)
 
-# forma alternativa
+# se definen las posiciones de test de cada fold
 set.seed(342)
-num_folds = k_folds
-v = sample(1:n,n,replace = F)
-pos1 = list()
+v = sample(1:n,n,replace = F) # vector auxiliar
+pos = list()
 for (k in 1:(num_folds-1)){
-  pos1[[k]] = v[((k-1)*n1+1):(k*n1)]
+  pos[[k]] = v[((k-1)*n1+1):(k*n1)]
 }
-pos1[[num_folds]] = v[(n-n1+1):n]
+# el ultimo fold puede tener un numero diferente de datos
+# (por redondeo)
+pos[[num_folds]] = v[(n-n1+1):n]
 
 v = 1:n
-error_k = rep(0,k_folds)
-for (k in 1:k_folds){
+error_k = rep(0,num_folds)
+for (k in 1:num_folds){
   # datos de training y de validation de cada fold
-  pos_va = pos[[k]]
-  pos_tr = v[-pos_va]
-  datos_tr = datos[pos_tr,]
-  datos_va = datos[pos_va,]
+  pos_test = pos[[k]]
+  pos_train = v[-pos_test]
+  datos_train = datos[pos_train,]
+  datos_test = datos[pos_test,]
   
   # estimamos el modelo
-  mk = lm(sales ~ TV, data = datos_tr)
+  mk = lm(sales ~ TV, data = datos_train)
   
   # error de prediccion
-  y_va = datos_va$sales
-  y_va_p = predict(mk,datos_va)
+  y_va = datos_test$sales
+  y_va_p = predict(mk,datos_test)
   
   error_k[k] = MSE(y_va,y_va_p)
 }
@@ -198,16 +189,22 @@ for (k in 1:k_folds){
 
 ## Funciones para el cross-validation
 
+Utilizando las definiciones anteriores, se van a definir funciones para poder aplicar cross-validation en temas posteriores:
+
+- funcion que calcula las posiciones de train y test dado el numero de folds ([descargar](cross_val_pos.R)):
+
 ```{r}
 source("cross_val_pos.R")
-source("cross_val_lm.R")
+cross_val_pos # se muestra el contenido de la función
 ```
 
-Aplicamos estas funciones a los datos:
+Aplicamos estas funciones a los datos para comprobar que funcionan correctamente:
 
 ```{r}
 set.seed(342)
-cross_val_lm(sales~TV,datos,k_folds)
+num_datos = 10
+num_folds = 3
+cross_val_pos(num_datos,num_folds)
 ```
 
 

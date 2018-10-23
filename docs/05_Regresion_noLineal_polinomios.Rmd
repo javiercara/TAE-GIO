@@ -51,15 +51,25 @@ $$
 
 Hay varias maneras de implementarlos en R:
 
+- Con la función *I()*:
+
 ```{r}
 m1 = lm(wage ~ age + I(age^2) + I(age^3) + I(age^4), data = datos)
 summary(m1)
 ```
 
+- Definiendo un cambio de variables:
+
 ```{r}
-m2 = lm(wage ~ cbind(age, age^2, age^3, age^4), data = datos)
+z1 = datos$age
+z2 = datos$age^2
+z3 = datos$age^3
+z4 = datos$age^4
+m2 = lm(wage ~ z1 + z2 + z3 + z4, data = datos)
 summary(m2)
 ```
+
+- Con la función *poly()*:
 
 ```{r}
 m3 = lm(wage ~ poly(age, degree = 4, raw = T), data = datos)
@@ -89,7 +99,7 @@ lines(age_grid, yp2, col = "blue", lty = 3)
 
 ```{r}
 library(leaps)
-grado_max = 10
+grado_max = 12
 m_best = regsubsets(wage ~ poly(age, degree = grado_max), data = datos, nvmax = grado_max)
 m_best_summary = summary(m_best)
 plot(m_best_summary$adjr2, xlab = "Grado del polinomio", ylab = "R2 ajustado", type = "b")
@@ -100,7 +110,6 @@ plot(m_best_summary$adjr2, xlab = "Grado del polinomio", ylab = "R2 ajustado", t
 
 ```{r}
 source("cross_val_pos.R")
-source("regsubsets_predict.R")
 source("MSE.R")
 
 # datos de los folds
@@ -114,10 +123,9 @@ for (i in 1:num_folds){
   datos_train = datos[pos$train[[i]],]
   datos_test = datos[pos$test[[i]],]
   
-  m_cv = regsubsets(wage ~ poly(age, degree = grado_max), data = datos, nvmax = grado_max)
-  
   for (j in 1:grado_max){
-    pred = predict(m_cv, newdata = datos_test, id = j)
+    m_cv = lm(wage ~ poly(age, degree = j), data = datos_train)
+    pred = predict(m_cv, newdata = datos_test)
     mse_cv[i,j] = MSE(datos_test$wage,pred)
   }
 }

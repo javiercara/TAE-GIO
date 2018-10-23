@@ -1,0 +1,237 @@
+---
+title: "Regresión no Lineal: splines de regresion"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Polinomios a trozos
+
+- Se divide el rango de *X* por medio de *k* puntos (o nodos), $c_1 < c_2 < \cdots < c_k$.
+- En cada intervalo se estima un polinomio de orden *d*.
+
+$$
+\begin{equation*}
+y_i = \left\{
+\begin{array}{cl}
+\beta_{00} + \beta_{10} x_i + \beta_{20} x_i^2 + \cdots + \beta_{d0} x_i^d + u_i & \text{si } x < c_1,\\
+\beta_{01} + \beta_{11} x_i + \beta_{21} x_i^2 + \cdots + \beta_{d1} x_i^d + u_i & \text{si } c_1 \leq x \leq c_2, \\
+\beta_{02} + \beta_{12} x_i + \beta_{22} x_i^2 + \cdots + \beta_{d2} x_i^d + u_i & \text{si } c_2 \leq x \leq c_3, \\
+\ldots & \ldots, \\
+\beta_{0k} + \beta_{1k} x_i + \beta_{2k} x_i^2 + \cdots + \beta_{dk} x_i^d + u_i & \text{si } x \geq c_k, \\
+\end{array} \right.
+\end{equation*}
+$$
+
+- Por tanto, hay *(k + 1)(d + 1)* parámetros a estimar o grados de libertad.
+
+- En los puntos $c_1, c_2, \cdots, c_k$ los polinomios han de ser continuos y suaves (con derivada de orden (d-1) continua). Por tanto, se añaden *kd* ecuaciones en cada nodo.
+
+- En total se tienen *(k + 1)(d + 1) - kd = k + d* grados de libertad. Por ejemplo en splines cubicas, se tienen *k + 4*.
+
+# Funciones base
+
+Estimar el las ecuaciones anteriores con las restricciones correspondientes puede parecer complicado. Una alternativa es usar *funciones base* para los polinomios. Es fácil comprobar que el siguiente modelo cumple las condiciones de las splines:
+
+$$
+y_i = \beta_0 + \beta_1 x + \beta_2 x^2 + \cdots + \beta_d x^d  + \beta_{d+1} h_1(x) + \cdots + \beta_{d+k} h_k(x) + u_i
+$$
+
+donde:
+
+$$
+\begin{equation*}
+h_i(x) = \left\{
+\begin{array}{cl}
+(x - c_i)^d & \text{si } x > c_i,\\
+0 & \text{si } x \leq c_i.
+\end{array} \right.
+\end{equation*}
+$$
+
+- En total se tienen *d+k+1* prámetros (base de tamaño *d+k* mas $\beta_0$).
+
+- Por tanto, un modelo que utiliza splines de orden 3 (d=3) y cuatro nodos (k = 4) tiene 7 grados de libertad. 
+
+# Datos
+
+Datos: Wage
+
+Wage and other data for a group of 3000 male workers in the Mid-Atlantic region.
+
+```{r}
+library(ISLR)
+datos = Wage
+datos = datos[datos$wage<250,]
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey", ylab = "wage (x 1000 $)", xlab = "age")
+```
+
+# Funciones base
+
+```{r}
+library(splines)
+```
+
+La función *bs()* define automaticamente una matriz con las funciones de base necesarias a partir de los nodos. Se puede hacer de dos maneras:
+
+- Especificando los nodos:
+
+```{r}
+dim(bs(datos$age, knots = c(25, 40, 60)))
+```
+
+Tres nodos y splines cúbicos originan una base de tamaño *k+3*!.
+
+```{r}
+# por defecto utiliza splines cubicos
+dim(bs(datos$age, knots = c(25, 40, 60), degree = 4))
+```
+
+- Especificando los grados de libertad:
+
+```{r}
+# k = df - 3, se utilizan quantiles
+attr(bs(datos$age, df = 6), "knots")
+```
+
+```{r}
+attr(bs(datos$age, df = 6, degree = 4), "knots")
+```
+
+# Estimacion del modelo
+
+```{r}
+m1 = lm(wage ~ bs(age, knots = c(25, 40, 60)), data = datos)
+summary(m1)
+```
+
+# Prediccion
+
+```{r}
+age_grid = seq(from = min(datos$age), to = max(datos$age), by = 1)
+alfa = 0.05
+yp = predict(m1, newdata = data.frame(age = age_grid), se = T)
+yp1 = yp$fit + qnorm(alfa/2, mean = 0, sd = 1)*yp$se.fit
+yp2 = yp$fit + qnorm(1-alfa/2, mean = 0, sd = 1)*yp$se.fit
+```
+
+```{r}
+plot(datos$age, datos$wage, col = "gray")
+lines(age_grid, yp$fit, col = "blue", lwd = 2)
+lines(age_grid, yp1, col = "blue", lty = 3)
+lines(age_grid, yp2, col = "blue", lty = 3)
+```
+
+# Splines cubicas naturales
+
+- Las splines tienen el problema de que en los extremos las predicciones tienen varianza elevada. 
+
+- Esto se debe a que fuera del rango de la variable (valor minimo, valor máximo), la spline es de orden *d*.
+
+- Una opción es obligar a que para valores menores que el mínimo y mayores que el máximo, la spline sea lineal. Esto corrige la varianza alta de los bordes.
+
+$$
+\begin{equation*}
+y_i = \left\{
+\begin{array}{cl}
+\beta_{00} + \beta_{10} x_i + u_i & \text{si } x < min(x_i),\\
+\beta_{00} + \beta_{10} x_i + \beta_{20} x_i^2 + \cdots + \beta_{d0} x_i^d + u_i & \text{si } min(x_i) \leq x \leq c_1, \\
+\beta_{01} + \beta_{11} x_i + \beta_{21} x_i^2 + \cdots + \beta_{d1} x_i^d + u_i & \text{si } c_1 \leq x \leq c_2, \\
+\ldots & \ldots, \\
+\beta_{0k} + \beta_{1k} x_i + \beta_{2k} x_i^2 + \cdots + \beta_{dk} x_i^d + u_i & \text{si } c_k \leq x \leq max(x_i), \\
+\beta_{0k} + \beta_{1k} x_i + u_i & \text{si } x \geq max(x_i), \\
+\end{array} \right.
+\end{equation*}
+$$
+- Luego se añaden *d-2* restricciones en cada uno de los contornos (derivadas 2,3 ,... ,(d-1) = 0), en total, * k + d - 2d + 4 = k - d + 4* funciones base.
+
+- En splines cúbicas, la base tiene tamaño *k+1*.
+
+- En R, se definen splines cúbicas naturales (las splines cúbicas son las más utilizadas) por medio de la función *ns()*.
+
+```{r}
+dim(bs(datos$age, knots = c(25, 40, 60)))
+```
+
+- Se estima el modelo:
+
+```{r}
+m2 = lm(wage ~ ns(age, knots = c(25, 40, 60)), data = Wage)
+summary(m2)
+```
+
+```{r}
+ypn = predict(m2, newdata = data.frame(age = age_grid), se = T)
+ypn1 = ypn$fit + qnorm(alfa/2, mean = 0, sd = 1)*ypn$se.fit
+ypn2 = ypn$fit + qnorm(1-alfa/2, mean = 0, sd = 1)*ypn$se.fit
+```
+
+```{r}
+plot(datos$age, datos$wage, col = "gray")
+#
+lines(age_grid, yp$fit, col = "blue", lwd = 2)
+lines(age_grid, yp1, col = "blue", lty = 3)
+lines(age_grid, yp2, col = "blue", lty = 3)
+#
+lines(age_grid, ypn$fit, col = "red", lwd = 2)
+lines(age_grid, ypn1, col = "red", lty = 3)
+lines(age_grid, ypn2, col = "red", lty = 3)
+```
+
+# Seleccion del numero de nodos para splines cubicas
+
+Se van a utilizar splines cubicas.
+
+```{r}
+# numero maximo de escalones
+num_max_gdl = 8
+
+r2_adj = rep(0, num_max_gdl)
+for (i in 3:num_max_gdl){
+  m = lm(wage ~ bs(age, df = i), data = datos)
+  m_summary = summary(m)
+  r2_adj[i] = m_summary$adj.r.squared
+}
+
+plot(3:num_max_gdl, r2_adj[3:num_max_gdl], type = "b")
+```
+
+
+
+```{r}
+source("cross_val_pos.R")
+source("MSE.R")
+
+# datos de los folds
+num_folds = 10
+# grado de libertad maximo
+num_max_gdl = 8
+set.seed(1)
+pos = cross_val_pos(nrow(datos),num_folds)
+
+mse_cv = matrix(0, nrow = num_folds, ncol = num_max_gdl)
+for (i in 1:num_folds){
+  # datos de training y de validation de cada fold
+  datos_train = datos[pos$train[[i]],]
+  datos_test = datos[pos$test[[i]],]
+  
+  for (j in 3:num_max_gdl){
+    m_cv = lm(wage ~ bs(age, df = j), data = datos_train)
+    pred = predict(m_cv, newdata = datos_test)
+    mse_cv[i,j] = MSE(datos_test$wage,pred)
+  }
+}
+
+mse_cv_med = apply(mse_cv, 2, mean)
+plot(3:num_max_gdl,mse_cv_med[3:num_max_gdl], type = "b")
+```

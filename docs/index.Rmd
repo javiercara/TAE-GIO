@@ -19,7 +19,8 @@ knitr::include_graphics("ISLCover.jpg")
 
 1. [Introducción](01_Introduccion.html)
 2. Regresión Lineal
-    i. [Regresión Lineal Simple](02_Regresion_Lineal_Simple.html)
+    i. [Introducción a la Regresión Lineal](02_Regresion_Lineal_Intro.html)
+    ii. [Regresión Lineal Simple](02_Regresion_Lineal_Simple.html)
     iii. [Regresión Lineal Múltiple](02_Regresion_Lineal_Multiple.html)
     iv. [Variables Cualitativas](02_Variables_Cualitativas.html)
 3. Técnicas de remuestreo
@@ -29,4 +30,11 @@ knitr::include_graphics("ISLCover.jpg")
     i. [Selección de variables](04_Seleccion_Variables.html)
 5. Regresión no-lineal
     i. [Polinomios](05_Regresion_noLineal_polinomios.html)
-    ii. [Función escalón](05_Regresion_noLineal_escalon.html)
+    ii. [Función escalonada](05_Regresion_noLineal_escalon.html)
+    iii. [Regression splines](05_Regresion_noLineal_regressionSplines.html)
+    iv. [Smoothing splines](05_Regresion_noLineal_smoothingSplines.html)
+    v. [Regresión local](05_Regresion_noLineal_regresionLocal.html)
+    vi. [GAMs](05_Regresion_noLineal_GAMs.html)
+6. Árboles de regresión
+    i. [Introducción a los árboles de regresión](06_tree_intro.html)
+    ii. [Árboles de regresión](06_tree_regresión.html)

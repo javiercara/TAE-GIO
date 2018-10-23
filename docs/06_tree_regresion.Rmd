@@ -1,0 +1,113 @@
+---
+title: "Árboles de regresión"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+# Estimación de los árboles de regresión
+
+```{r cars}
+library(tree)
+datos = read.table('coches.txt',header=T)
+```
+
+```{r}
+t1 = tree(consumo ~ cv + peso,data=datos)
+```
+
+```{r}
+plot(t1)
+text(t1, pretty=0)
+```
+
+vemos que los dos regresores son influyentes en el consumo, ya que se han empleado en las particiones.
+
+```{r}
+print(t1)
+```
+
+Lo que devuelve la tabla es:
+
+- Numero del nodo
+- split: criterio para hacer la partición del nodo
+- n: numero de datos que componen el nodo.
+- deviance: = RSS = $\sum(y_i - \hat{y}_i)^2$.
+```{r}
+n = nrow(datos)
+( deviance_root = sum( (datos$consumo - mean(datos$consumo))^2 ) )
+```
+- yval: predicción del nodo = $\bar{y}$
+```{r}
+mean(datos$consumo)
+```
+
+
+# Parámetros del árbol
+
+```{r}
+t2 = tree(consumo ~ cv + peso,data=datos, control = tree.control(nobs=nrow(datos),mincut = 20,minsize = 40,mindev = 0.005))
+plot(t2)
+text(t2, cex=.75)
+```
+
+control:
+
+- minsize: tamaño mínimo del nodo para que se divida en dos (por defecto, minsize = 10).
+- mincut: si al dividir un nodo, uno de los nodos hijo tiene un tamaño inferior a éste, no se divide el nodo (por defecto, mincut = 5). Ojo, mincut ha de ser menor que minsize/2.
+- mindev: para que un nodo se divida, la deviance del nodo tiene que ser mayor que mindev por la deviance del nodo raiz.
+
+```{r}
+print(t2)
+```
+
+# Training set *vs* Test set
+
+Dividimos los datos en dos partes, una para entrenar el modelo y otra para calcular el error de predicción con datos diferentes de los utilizados para entrenar:
+
+```{r}
+set.seed(321)
+ndat = nrow(datos)
+train = sample(1:ndat,ndat/2) # la mitad de los datos para entranamiento
+datos_train = datos[train,] # trainning set
+datos_test = datos[-train,] # validation set
+```
+
+Entrenamiento del modelo
+
+```{r}
+t3 <- tree(consumo ~ ., data = datos_train)
+plot(t3)
+text(t3)
+```
+
+Error del modelo
+
+```{r}
+y_train_p <- predict(t3, newdata = datos_train)
+```
+
+
+```{r}
+y_train = datos_train$consumo
+plot(y_train,y_train_p)
+abline(0,1) # como pintamos y vs yp, la relacion perfecta deberia ser una recta a 45º (m=1)
+( MSE_train = mean((y_train-y_train_p)^2) ) # error cuadratico medio en los datos de training
+```
+
+```{r}
+# prediccion del consumo con los datos de test
+y_test_p = predict(t3, newdata = datos_test)
+
+# error del test set
+y_test = datos_test$consumo
+(MSE_test = mean((y_test-y_test_p)^2))
+```
+
+El error es mucho mayor con los datos de validación!

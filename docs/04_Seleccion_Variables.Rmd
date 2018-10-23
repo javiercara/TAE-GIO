@@ -1,7 +1,7 @@
 ---
 title: "Selección de Variables en modelos lineales"
 author: "Javier Cara"
-date: "Septiembre de 2018"
+date: "Curso 2018-19"
 output: 
   html_document:
     number_sections: true
@@ -85,7 +85,7 @@ $$
 AIC = \frac{1}{n\hat{\sigma}^2}(RSS + 2d\hat{\sigma}^2)
 $$
 
-Cp y AIC son proporcionales, $C_p = AIC \hat{\sigma}^2$.
+Cp y AIC son proporcionales, $C_p = AIC * \hat{\sigma}^2$.
 
 $$
 BIC = \frac{1}{n}(RSS + \log(n)d\hat{\sigma}^2)
@@ -121,7 +121,7 @@ names(m_best_summary)
 
 
 ```{r}
-plot(m_best_summary$adjr2, xlab = "Numero de variables", ylab = "R2 ajustado", type = "l")
+plot(m_best_summary$adjr2, xlab = "Numero de variables", ylab = "R2 ajustado", type = "b")
 ```
 
 Buscamos el máximo:
@@ -130,10 +130,10 @@ Buscamos el máximo:
 which.max(m_best_summary$adjr2)
 ```
 
-Si utilizamos el criterio del Cp:
+Si utilizamos el criterio del Cp (que es equivalente al AIC):
 
 ```{r}
-plot(m_best_summary$cp, xlab = "Numero de variables", ylab = "R2 ajustado", type = "l")
+plot(m_best_summary$cp, xlab = "Numero de variables", ylab = "R2 ajustado", type = "b")
 ```
 
 ```{r}
@@ -159,7 +159,6 @@ Algoritmo:
     b. Elegir el que tenga menor RSS o mayor R$^2$. Este será el modelo M$_{k+1}$.
 3. Elegir el mejor modelo de M0, ..., M$_{p}$ utilizando validación cruzada, Cp, AIC, BIC, R2-ajustado.
 
-Se puede utilizar la función *regsubsets()*
 
 ```{r}
 m_fwd = regsubsets(Salary ~ ., data = datos, nvmax = 19, method = "forward")
@@ -186,7 +185,6 @@ Algoritmo:
     b. Elegir el que tenga menor RSS o mayor R$^2$. Este será el modelo M$_{k-1}$.
 3. Elegir el mejor modelo de M0, ..., M$_{p}$ utilizando validación cruzada, Cp, AIC, BIC, R2 ajustado.
 
-Se puede utilizar la función *regsubsets()*
 
 ```{r}
 m_bwd = regsubsets(Salary ~ ., data = datos, nvmax = 19, method = "backward")
@@ -204,8 +202,8 @@ coef(m_bwd,10)
 
 Es el mismo que antes.
 
-# Eligiendo el mejor modelo utilizando subconjuntos de validación
 
+# Eligiendo el mejor modelo utilizando subconjuntos de validación
 
 ```{r}
 set.seed(1)
@@ -231,15 +229,16 @@ m_val = regsubsets(Salary ~ ., data = datos_train, nvmax = 19)
 Vamos a predecir con los datos de test. Como no existe la funcion predecir para este tipo de modelos, la construimos nosotros:
 
 ```{r}
-X_train = model.matrix(Salary ~ ., data = datos_test)
+X_test = model.matrix(Salary ~ ., data = datos_test)
 ```
 
 ```{r}
 source("MSE.R")
+#
 mse_val = rep(0,19)
 for (i in 1:19){
   coef_i = coef(m_val,i)
-  pred_i = X_train[,names(coef_i)] %*% coef_i
+  pred_i = X_test[,names(coef_i)] %*% coef_i
   mse_val[i] = MSE(datos_test$Salary,pred_i)
 }
 which.min(mse_val)
@@ -252,18 +251,15 @@ m_val_final = regsubsets(Salary ~ ., data = datos, nvmax = 19)
 coef(m_val_final,8)
 ```
 
-Funcion para predecir:
+La función que predice a partir de modelos estimados con *regsubsets()* la vamos a utilizar más veces. Por eso definimos una función para predecir:
 
-```{r}
-predict.regsubsets = function(objeto_regsubsets, newdata, id){
-  formu = as.formula(objeto_regsubsets$call[[2]])
-  X_mat = model.matrix(formu,newdata)
-  coefi = coef(objeto_regsubsets, id)
-  X_col = names(coefi)
-  pred = X_mat[,X_col] %*% coefi
-  return(pred)
-}
+```{r fundef}
+source("regsubsets_predict.R")
+predict.regsubsets
 ```
+
+Comprobamos que funciona bien:
+
 ```{r}
 head(predict.regsubsets(m_val_final,datos,8))
 ```
@@ -291,7 +287,7 @@ set.seed(1)
 pos = cross_val_pos(nrow(datos),num_folds)
 ```
 
-
+Calculamos el error cometido en cada fold por cada modelo:
 
 ```{r}
 mse_cv = matrix(0, nrow = num_folds, ncol = 19)

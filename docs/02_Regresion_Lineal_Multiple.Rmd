@@ -1,11 +1,14 @@
 ---
 title: "Regresión Lineal Multiple"
 author: "Javier Cara"
-date: "Septiembre de 2018"
+date: "Curso 2018-19"
 output: 
   html_document:
     number_sections: true
     toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}

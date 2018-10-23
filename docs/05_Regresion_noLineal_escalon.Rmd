@@ -1,5 +1,5 @@
 ---
-title: "Regresión no Lineal: función escalón"
+title: "Regresión no Lineal: función escalonada"
 author: "Javier Cara"
 date: "curso 2018-19"
 output: 
@@ -17,9 +17,41 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Metodo
 
-- Se divide el rango de *X* 
+- Se divide el rango de *X* por medio de *k* puntos, $c_1 < c_2 < \cdots < c_k$.
+- Se definen *k+1* variables auxiliares.
 
-# Introducción
+$$
+\begin{align}
+C_0(X) & = I(X < c_1 ) \\
+C_1(X) & = I(X \in (c_1,c_2] )\\
+C_2(X) & = I(X \in (c_2,c_3] ) \\
+\cdots & = \cdots \\
+C_k(X) & = I(X > c_k )
+\end{align}
+$$
+
+donde:
+
+$$
+\begin{equation*}
+I(X \in (c_{i},c_{i+1}] ) = \left\{
+\begin{array}{rl}
+1 & \text{si } X \in (c_{i},c_{i+1}],\\
+0 & \text{si } X \notin (c_{i},c_{i+1}].
+\end{array} \right.
+\end{equation*}
+$$
+
+- Se estima el modelo de regresión:
+
+$$
+y_i = \beta_0 + \beta_1 C_1(x) + \beta_2 C_2(x) + \cdots + \beta_k C_k(x) + u_i
+$$
+
+# Ejemplo
+
+
+## Datos
 
 Datos: Wage
 
@@ -32,31 +64,70 @@ datos = datos[datos$wage<250,]
 plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey")
 ```
 
+## Variables auxiliares
+
+La función *cut()* define automaticamente cuatro intervalos:
 
 
 ```{r}
-head(cut(datos$age,4), 20)
+head(cut(datos$age,4), 10)
 ```
 
-El resultado de cut() es un factor.
+El resultado de *cut()* es un factor.
 
 ```{r}
 class(cut(datos$age,4))
 ```
 
-Se estima el modelo de regresión. *lm()* se encarga de crear las variables necesarias:
+Se han definido las siguientes variables:
+
+$$
+\begin{align}
+C_0(X) & = I(X \in (17.9,33.5] ) \\
+C_1(X) & = I(X \in (33.5,49] )\\
+C_2(X) & = I(X \in (49,64.5] ) \\
+C_3(X) & = I(X \in (64.5,80.1] )
+\end{align}
+$$
+
+## Estimacion del modelo
+
+El modelo de regresión es:
+
+$$
+y_i = \beta_0 + \beta_1 C_1(x) + \beta_2 C_2(x) + \beta_3 C_3(x) + u_i
+$$
+
+Se estima el modelo de regresión:
 
 ```{r}
 m_esc = lm(wage ~ cut(age,4), data = datos)
 summary(m_esc)
 ```
 
+Como son variables cero-uno, estamos estimando cuatro modelos:
+
+$$ X \in (17.9,33.5], \quad y_i = \beta_0 + u_i$$
+
+$$ X \in (33.5,49], \quad y_i = \beta_0 + \beta_1 + u_i$$
+
+$$ X \in (49,64.5], \quad y_i = \beta_0 + \beta_2 + u_i$$
+
+$$ X \in (64.5,80.1], \quad y_i = \beta_0 + \beta_3 + u_i$$
+
+El pvalor de $\beta_3 > 0.05$, luego $\beta_3 = 0$.
+
+## Dibujo del modelo estimado con intervalos de confianza
+
 ```{r}
 age_grid = seq(from = min(datos$age), to = max(datos$age), by = 1)
 yp = predict(m_esc, newdata = data.frame(age = age_grid), se = TRUE)
-yp1 = yp$fit - 2*yp$se.fit
-yp2 = yp$fit + 2*yp$se.fit
+alfa = 0.05
+yp1 = yp$fit + qnorm(alfa/2, mean = 0, sd = 1)*yp$se.fit
+yp2 = yp$fit + qnorm(1-alfa/2, mean = 0, sd = 1)*yp$se.fit
 ```
+
+
 
 ```{r}
 plot(wage ~ age, data = datos, xlim = range(age), cex = 0.5, col = "darkgrey")
@@ -65,3 +136,26 @@ lines(age_grid, yp$fit, lwd = 2, col = "blue")
 lines(age_grid, yp1, col = "blue", lty = 3)
 lines(age_grid, yp2, col = "blue", lty = 3)
 ```
+
+## Cálculo del número de escalones con el R2-ajustado
+
+```{r}
+# numero maximo de escalones
+num_max_esc = 20
+
+# datos de los folds
+
+r2_adj = rep(0, num_max_esc)
+for (i in 2:num_max_esc){
+  m = lm(wage ~ cut(age,i), data = datos)
+  m_summary = summary(m)
+  r2_adj[i] = m_summary$adj.r.squared
+}
+
+plot(r2_adj, type = "b")
+```
+
+## Cálculo del número de escalones con Cross-Validation
+
+
+

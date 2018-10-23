@@ -1,0 +1,79 @@
+---
+title: "Regresión no Lineal: smoothing splines"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Modelo
+
+Las regression splines se definen de la siguiente forma:
+
+- Se definen los nodos.
+- Los nodos generan una base de polinomios para la spline.
+- Usando mínimos cuadrados se estiman los coeficientes de la base.
+
+Hay otra manera de generar una spline, que es minimizar el funcional:
+
+$$
+\textbf F[g(x)] = \sum_{i=1}^n (y_i - g(x_i))^2 + \lambda \int g''(x)^2 dx = F_1[g(x)] + F_2[g(x)]
+$$
+
+donde *g(x)* es la spline, conocida como *smoothing spline*. $\lambda$ es un parámetro de ajuste.
+
+- *F1[g(x)]* y *F2[g(x)]* son siempre positivas, por lo que minimizar *F[g(x)]* equivale a minimizar ambas.
+- Si $\lambda=0$, minimizar el funcional equivale a que *g(x)* interpola todos los *yi*, produciendo un sobreajuste de los datos.
+- Si $\lambda=\infty$, minimizar el funcional equivale a que *g(x)* sea una recta:
+    - $g'(x)$ es una medida de la pendiente de la spline en *x*. 
+    - Por tanto, $g''(x)$ es una medida de como cambia la pendiente de *g(x)* en *x*.
+    - $\int g''(x)^2 dx$ es la suma del cambio de la pendiente de *g(x)* en todo *x*.
+    - Si $\lambda \rightarrow 0$, *F1[g(x)]* predomina sobre *F2[g(x)]*, por lo que minimizar *F[g(x)]* equivale a minimizar *F1[g(x)]*: se obtiene una spline poco suave.
+    - Si $\lambda \rightarrow \infty$, *F2[g(x)]* predomina sobre *F1[g(x)]*, por lo que minimizar *F[g(x)]* equivale a minimizar *F2[g(x)]*: se obtiene la spline más suave posible, la recta.
+- Se puede demostrar que, para un $\lambda$ dado, la función *g(x)* que minimiza *F[g(x)]* es una spline natural cubica con nodos en $x_1, x_2, \ldots, x_n$.
+- Para $\lambda=0$, el número de grados de libertad de la spline es *n*, y para $\lambda=\infty$, el número de grados de libertad es 2 (una recta).
+
+
+# Estimacion del modelo
+
+```{r}
+library(ISLR)
+datos = Wage
+datos = datos[datos$wage<250,]
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey", ylab = "wage (x 1000 $)", xlab = "age")
+```
+
+```{r}
+m1 = smooth.spline(datos$age, datos$wage, df = 20)
+m2 = smooth.spline(datos$age, datos$wage, df = 7)
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey", ylab = "wage (x 1000 $)", xlab = "age")
+title("Smoothing splines")
+lines(m1, col = "red", lwd = 2)
+lines(m2, col = "blue", lwd = 2)
+legend(70,200, legend = c("20 df", "7 df"), col = c("red","blue"), lty = 1, lwd = 2)
+```
+
+# Prediccion
+
+```{r}
+age_grid = seq(from = min(datos$age), to = max(datos$age), by = 1)
+alfa = 0.05
+yp = predict(m1, newdata = data.frame(age = age_grid))
+str(yp)
+```
+
+```{r}
+plot(datos$age, datos$wage, col = "gray")
+lines(yp$x, yp$y, col = "blue", lwd = 2)
+```
+
+Esta información ya está dentro de m1.

@@ -21,7 +21,7 @@ cross_val_pos = function(num_datos,num_folds){
     train[[k]] = v[-pos_test]
   }
   # el ultimo puede tener un numero diferente de datos (por trunc)
-  pos_test = (num_datos-n1+1):num_datos
+  pos_test = ((num_folds-1)*n1+1):num_datos
   test[[num_folds]] = v[pos_test]
   train[[num_folds]] = v[-pos_test]
   

@@ -1,0 +1,100 @@
+---
+title: "Regresión no Lineal: Generalized Aditive Models"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Modelo
+
+- Los métodos estudiados hasta ahora utilizan solo un regresor.
+- Los Modelos Aditivos Generalizados (GAMs) constituyen la manera natural de extender los modelos de regresión múltiple.
+- Datos: $\{y_i, x_{1i}, x_{2i}, \ldots, x_{pi}\}, \ i=1, \ldots, n$
+
+$$
+y_i = \beta_0 + f(x_{1i}) + f(x_{2i}) + \cdots + f(x_{pi}) + u_i
+$$
+
+# Ejemplo
+
+Datos: Wage
+
+Wage and other data for a group of 3000 male workers in the Mid-Atlantic region.
+
+```{r}
+library(ISLR)
+datos = Wage
+datos = datos[datos$wage<250,]
+plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey", ylab = "wage (x 1000 $)", xlab = "age")
+```
+
+- Usamos natural splines para *year* y *age*. Como *ns()* devuelve **funciones base**, se puede estimar el modelo utilizando mínimos cuadrados:
+
+```{r}
+library(splines)
+m1 = lm(wage ~ ns(year,4)+ns(age,5)+education,data=Wage)
+summary(m1)
+```
+
+Con el paquete *gam()* podemos representar los regresores:
+
+```{r}
+library(gam)
+par(mfrow=c(1,3))
+plot.Gam(m1, se=TRUE, col="red")
+```
+
+
+- Vamos a utilizar ahora *smoothing splines*:
+
+```{r}
+m2 = gam(wage ~ s(year,4) + s(age,5) + education, data=Wage)
+summary(m2)
+```
+
+El contraste anova se refiere a: H0: relación lineal, H1: realación no lineal. Luego parece que para year es buena idea no utilizar una spline.
+
+```{r}
+par(mfrow=c(1,3))
+plot.Gam(m2, se=TRUE, col="red")
+```
+
+```{r}
+m3 = gam(wage ~ year + s(age,5) + education, data=Wage)
+summary(m3)
+```
+
+- Podemos usar regresión local:
+
+```{r}
+m4 = gam(wage ~ year + lo(age,span = 0.7) + education, data=Wage)
+summary(m4)
+```
+
+Para seleccionar el modelo vamos a calcular el MSE:
+
+```{r}
+source("MSE.R")
+
+model = list(m1,m2,m3,m4)
+MSEi = numeric(4)
+for (i in 1:4){
+  predi = predict(model[[i]], newdata = datos)
+  MSEi[i] = MSE(datos$wage, predi)
+}
+plot(MSEi, type = "b")
+```
+
+
+
+

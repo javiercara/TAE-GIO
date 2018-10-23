@@ -1,11 +1,14 @@
 ---
 title: "Regresión Lineal con variables cualitativas"
 author: "Javier Cara"
-date: "Septiembre de 2018"
+date: "Curso 2018-19"
 output: 
   html_document:
     number_sections: true
     toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
@@ -37,18 +40,18 @@ $$
 Balance = \beta_0 + \beta_1 X_1 + u
 $$
 
-Male: X_1 = 0
+Male: X1 = 0
 
-Female: X_2 = 1
+Female: X1 = 1
 
 ```{r}
 m1 = lm(Balance ~ Gender, data = datos)
 summary(m1)
 ```
 
-Male (X_1 = 0): $Balance = \beta_0$ El crédito medio de los hombres es 509.80
+Male (X1 = 0): $Balance = \beta_0$ El crédito medio de los hombres es 509.80
 
-Female (X_1 = 1): $Balance = \beta_0 + \beta_1$ El crédito medio de las mujeres es 509.80 + 19.73 = 529.53
+Female (X1 = 1): $Balance = \beta_0 + \beta_1$ El crédito medio de las mujeres es 509.80 + 19.73 = 529.53
 
 Cambiamos el orden del factor
 
@@ -62,9 +65,9 @@ m2 = lm(datos$Balance ~ Gender1)
 summary(m2)
 ```
 
-Female (X_1 = 0): $Balance = \beta_0$ El crédito medio de las mujeres es 529.54 
+Female (X1 = 0): $Balance = \beta_0$ El crédito medio de las mujeres es 529.54 
 
-Male (X_1 = 1): $Balance = \beta_0 + \beta_1$ El crédito medio de las mujeres es 529.80 - 19.73 = 509.80
+Male (X1 = 1): $Balance = \beta_0 + \beta_1$ El crédito medio de las mujeres es 529.80 - 19.73 = 509.80
 
 ## Variable cualitativa con tres niveles
 
@@ -82,19 +85,19 @@ $$
 Balance = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + u
 $$
 
-Modelo para "African American": X_1 = 0, X_2 = 0
+Modelo para "African American": X1 = 0, X2 = 0
 
 $$
 Balance = \beta_0 + u
 $$
 
-Modelo para "Asian": X_1 = 1, X_2 = 0
+Modelo para "Asian": X1 = 1, X2 = 0
 
 $$
 Balance = \beta_0 + \beta_1 + u
 $$
 
-Modelo para "Caucasian": X_1 = 0, X_2 = 1
+Modelo para "Caucasian": X1 = 0, X2 = 1
 
 $$
 Balance = \beta_0 + \beta_2 + u
@@ -107,29 +110,34 @@ m3 = lm(Balance ~ Ethnicity, data = datos)
 summary(m3)
 ```
 
-Para otras comparaciones:
+Según los pvalores, no hay diferencias entre "African American" y "Asian". Ni tampoco entre "African American" y "Caucasian".
+
+Podemos hacer otras comparaciones utilizando:
 
 ```{r}
-datos$Ethnicity= relevel(datos$Ethnicity,ref="Asian")
+Ethnicity1 = relevel(datos$Ethnicity, ref="Asian")
 ```
 
 ```{r}
-x = factor(datos$Ethnicity,levels=c("Caucasian","Asian","African American"))
+Ethnicity2 = factor(datos$Ethnicity,levels=c("Caucasian","Asian","African American"))
 ```
 
 # Variables cualitativas y cuantitativas
-
-X_1 = 0: No student
-
-X_1 = 1: Student
 
 $$
 Balance = \beta_0 + \beta_1 Income + \beta_2 X_1 + u
 $$
 
-Si X_1 = 0: $Balance = \beta_0 + \beta_1 Income$
+donde:
 
-Si X_1 = 1: $Balance = (\beta_0  + \beta_2) + \beta_1 Income$
+- X1 = 0: No student
+
+- X1 = 1: Student
+
+
+Si X1 = 0: $Balance = \beta_0 + \beta_1 Income$
+
+Si X1 = 1: $Balance = (\beta_0  + \beta_2) + \beta_1 Income$
 
 Tenemos dos rectas, con la misma pendiente y distinta $\beta_0$.
 
@@ -151,9 +159,9 @@ $$
 Balance = \beta_0 + \beta_1 Income + \beta_2 X_1 + \beta_3 X_1 Income + u
 $$
 
-Si X_1 = 0: $Balance = \beta_0 + \beta_1 Income$
+Si X1 = 0: $Balance = \beta_0 + \beta_1 Income$
 
-Si X_1 = 1: $Balance = (\beta_0  + \beta_2) + (\beta_1 + \beta_3) Income$
+Si X1 = 1: $Balance = (\beta_0  + \beta_2) + (\beta_1 + \beta_3) Income$
 
 Tenemos dos rectas, con la misma pendiente y distinta $\beta_0$.
 
@@ -163,3 +171,13 @@ summary(m4)
 ```
 
 Según los resultados del análisis, las rectas tienen la misma pendiente.
+
+La interacción en R se define utilizando los dos puntos (:). Por tanto, el modelo anterior es equivalente a poner:
+
+```{r}
+m5 = lm(Balance ~ Income + Student + Income:Student, data = datos)
+summary(m5)
+```
+
+
+

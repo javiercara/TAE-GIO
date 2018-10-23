@@ -1,0 +1,236 @@
+---
+title: "Regresión Logistica"
+author: "Javier Cara"
+date: "Curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data
+
+```{r}
+library(ISLR)
+datos = Default
+str(datos)
+```
+
+A data frame with 10000 observations on the following 4 variables.
+
+- defaul: A factor with levels No and Yes indicating whether the customer defaulted on their debt
+
+- student: A factor with levels No and Yes indicating whether the customer is a student
+
+- balance: The average balance that the customer has remaining on their credit card after making their monthly payment
+
+- income: Income of customer (x 1000$).
+
+```{r}
+plot(datos$balance, as.numeric(datos$default)-1, pch = 3, col = "orange", xlab = "Balance", ylab = "Probability of Default")
+```
+
+# Regresión simple con variable respuesta cualitativa
+
+$$
+Pr(default|balance_i) = \beta_0 + \beta_1 balance_i + u_i
+$$
+
+```{r}
+m_rs = lm(default ~ balance, data = datos)
+```
+
+Tenemos que convertir *default* a variable numérica:
+
+```{r}
+m_rs = lm(as.numeric(default) - 1 ~ balance, data = datos)
+plot(datos$balance, as.numeric(datos$default) - 1, pch = 3, col = "orange", xlab = "Balance", ylab = "Probability of Default")
+abline(m_rs, col = "blue", lwd = 2)
+```
+
+El problema con este modelo es que:
+
+- para valores cercanos a cero de balance predice probabilidades negativas.
+- para valores muy grandes de balance predice probabilidades mayores que uno.
+
+Para evitar estos inconvenientes se utiliza el modelo logístico.
+
+# El modelo logit
+
+Hay muchos modelos que dan valores entre 0 y 1 para todos los valores de x. El que se usa en regresión logística es la denominara función logística:
+
+$$
+Pr(default|balance_i) = Pr(y=1|x_i) = \frac{e^{\beta_0+\beta_1x_i}}{1+e^{\beta_0+\beta_1x_i}}
+$$
+
+Suele utilizarse la simplificación $Pr(y=1|x_i) = p(x_i)$. Este modelo puede reescribirse como:
+
+$$
+\log \left( \frac{p(x_i)}{1-p(x_i)} \right) = \beta_0+\beta_1x_i
+$$
+
+El término de la izquierda se conoce como *logit*.
+
+
+# Estimación del modelo
+
+El modelo logit se estima utilizando el *método de máxima verosimilitud*.
+
+```{r}
+m1 = glm(default ~ balance, data = datos, family = binomial)
+summary(m1)
+```
+
+Los pvalores < 0.05. Por otra parte, $\beta_1 >0$, luego un aumento del *balance* implica un aumento de la *Pr(default)*.
+
+# Predicciones
+
+## Regresores cualitativos
+
+```{r}
+predict(m1, newdata = data.frame(balance = c(1000, 2000)), type = "response")
+```
+Lo que obtenemos es Pr(default | xi = 1000) y Pr(default | xi = 2000).
+
+Vamos a dibujar la funcion estimada:
+
+```{r}
+balance_grid = seq(from = min(datos$balance), to = max(datos$balance), by = 1)
+pred_grid = predict(m1, newdata = data.frame(balance=balance_grid), type = "response")
+```
+
+```{r}
+plot(datos$balance, as.numeric(datos$default) - 1, pch = 3, col = "orange", xlab = "Balance", ylab = "Probability of Default")
+lines(balance_grid, pred_grid, col = "blue", lwd = 2)
+```
+
+Matriz de confusión:
+
+```{r}
+pred1 = predict(m1, newdata = datos, type = "response")
+pred2 = rep("No", 10000)
+pred2[pred1 > 0.5] = "Yes"
+table(datos$default, pred2)
+```
+
+El modelo ha predicho correctamente 9625 + 100 = 9725 de 10000 datos.
+
+## Regresores cualitativos.
+
+En este modelo también podemos utilizar regresores cualitativos por medio de variables auxiliares 0 - 1. 
+
+```{r}
+m2 = glm(default ~ student, data = datos, family = binomial)
+summary(m2)
+```
+
+Según el pvalor, la condición de estudiante es significativa en la probabilidad de default. Como $\beta_1 >0$, los estudiantes tienen probabilidad de default mayor que los no estudiantes. Se puede comprobar:
+
+```{r}
+predict(m2, newdata = data.frame(student = "Yes"), type = "response")
+```
+
+```{r}
+predict(m2, newdata = data.frame(student = "No"), type = "response")
+```
+
+# Regresión logística múltiple
+
+Los datos son ahora: $y_i, x_{1i}, x_{2i}, \ldots, x_{pi}, \ i = 1, \ldots, n$. El modelo logit se generaliza como:
+
+$$
+Pr(y=1|X_i) = p(X_i) = \frac{e^{\beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_1 x_{pi}} }{1 + e^{\beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_1 x_{pi}} }
+$$
+
+O también:
+
+$$
+\log \left( \frac{p(X_i)}{1-p(X_i)} \right) = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_1 x_{pi}
+$$
+
+donde $X_i = \{x_{1i}, x_{2i}, \cdots, x_{pi}\}$.
+
+```{r}
+m3 = glm(default ~ balance + income + student, data = datos, family = binomial)
+summary(m3)
+```
+
+Se observa lo siguiente:
+
+- balance y student son significativas, income no lo es.
+- $\beta_1 >0$, luego un aumento del balance (manteniendo fijos income y student) implica un aumento de la Pr(default).
+- $\beta_3 <0$, luego los estudiantes (manteniendo fijos income y balance) tienen menor Pr(default) que los no estudiantes. Esto entra en contradicción con lo observado cuando se analizaron los datos de student de forma aislada. Pero:
+    - Si los datos de balance no son disponibles, un estudiante tiene más probabilidad de default que un no estudiante.
+    - Si los datos de balance están disponibles, para un mismo nivel de balance, los no estudiantes tienen mayor probabilidad de default que los estudiantes.
+
+```{r}
+predict(m3, newdata = data.frame(balance = 1500, income = mean(datos$income), student = "Yes"), type = "response")
+```
+
+```{r}
+predict(m3, newdata = data.frame(balance = 1500, income = mean(datos$income), student = "No"), type = "response")
+```
+
+# Validation set approach
+
+- Creamos los datos para el train y el test:
+
+```{r}
+set.seed(1)
+
+n = nrow(datos)
+n_train = round(n/2)
+n_test = n - n_train
+
+v = 1:n
+pos_train = sample(v, n_train, replace = F) # muestreo sin reemplazamiento
+pos_test = v[-pos_train]
+
+# dividimos los datos en training set y validation set
+datos_train = datos[pos_train,]
+datos_test = datos[pos_test,]
+```
+
+- En el training set estimamos el modelo:
+
+```{r}
+mtr = glm(default ~ balance + income + student, data = datos_train, family = binomial)
+
+# error en el training set
+y_train = datos_train$default
+y_train_p = predict(mtr, datos_train, type = "response")
+y_train_p1 = rep("No", n_train)
+y_train_p1[y_train_p > 0.5] = "Yes"
+(M_train = table(y_train, y_train_p1))
+```
+
+Error cometido
+
+```{r}
+(n_train - sum(diag(M_train)))/n_train*100
+```
+
+
+
+- En el test set calculamos el error de predicción:
+
+```{r}
+y_test = datos_test$default
+y_test_p = predict(mtr, datos_test, type = "response")
+y_test_p1 = rep("No", n_test)
+y_test_p1[y_test_p > 0.5] = "Yes"
+(M_test = table(y_test, y_test_p1))
+```
+
+Error cometido
+
+```{r}
+(n_test - sum(diag(M_test)))/n_test*100
+```
