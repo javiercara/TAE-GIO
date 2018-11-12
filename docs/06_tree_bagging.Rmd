@@ -1,0 +1,92 @@
+---
+title: "Bagging"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+# Lectura de datos
+
+```{r cars}
+library(tree)
+datos = read.table('coches.txt',header=T)
+datos = na.omit(datos)
+datos$origen = factor(datos$origen, labels = c("USA","Europa","Japon"))
+```
+
+# Training set *vs* Test set
+
+Dividimos los datos en dos partes, una para entrenar el modelo y otra para calcular el error de predicción con datos diferentes de los utilizados para entrenar:
+
+```{r}
+set.seed(321)
+ndat = nrow(datos)
+train = sample(1:ndat,ndat/2) # la mitad de los datos para entranamiento
+datos_train = datos[train,] # trainning set
+datos_test = datos[-train,] # test set
+```
+
+# Bootstrap aggregation o Bagging
+
+- Se remuestrea con reemplazamiento *B* veces.
+- Se estima un arbol para cada muestra, $f_b(x)$. Los árboles son profundos y no se podan.
+- Se calcula la predicción proporcionada por cada árbol, $\hat f_b(x)$.
+- Se promedian las predicciones
+
+$$
+\hat f_{bag} = \frac{1}{B}\sum_{b=1}^B \hat f_b(x)
+$$
+
+```{r}
+library(randomForest)
+nreg = ncol(datos)-1
+bag1 = randomForest(consumo ~ ., data = datos_train, mtry=nreg, ntree = 500)
+```
+
+Error del modelo:
+
+```{r}
+yp_train_bag1 <- predict(bag1, newdata = datos_train)
+
+y_train = datos_train$consumo
+( MSE_train_bag1 = mean((y_train - yp_train_bag1)^2) ) # error cuadratico medio en los datos de training
+```
+
+Error de predicción:
+
+```{r}
+# prediccion del consumo con los datos de validacion
+yp_test_bag1 = predict(bag1, newdata = datos_test)
+
+# error del validation set
+y_test = datos_test$consumo
+(MSE_test_bag1 = mean((y_test - yp_test_bag1)^2))
+```
+
+Comparar los errores con los obtenidos utilizando un solo arbol.
+
+# Importancia de variables
+
+```{r}
+bag2 = randomForest(consumo ~ ., data = datos_train, mtry=nreg, ntree = 500, importance = T)
+```
+
+```{r}
+importance(bag2)
+```
+
+- %IncMSE: descenso de la calidad de las predicciones realizadas en los datos *out of bag* cuando una variable es excluida del modelo (variables importantes en la predicción).
+
+- IncNodePurity: suma del descenso acumulado del RSS al partir por dicha variable en los diferentes árboles del bagging (variables importantes en el RSS del modelo).
+
+```{r}
+varImpPlot(bag2)
+```
+
+

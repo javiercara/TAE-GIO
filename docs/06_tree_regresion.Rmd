@@ -19,15 +19,19 @@ datos = read.table('coches.txt',header=T)
 ```
 
 ```{r}
-t1 = tree(consumo ~ cv + peso,data=datos)
+t1 = tree(consumo ~ .,data=datos)
 ```
 
 ```{r}
 plot(t1)
-text(t1, pretty=0)
+text(t1, cex = 0.75)
 ```
 
-vemos que los dos regresores son influyentes en el consumo, ya que se han empleado en las particiones.
+```{r}
+summary(t1)
+```
+
+Los regresores que son influyentes en el consumo son los que se han empleado en las particiones.
 
 ```{r}
 print(t1)
@@ -39,20 +43,24 @@ Lo que devuelve la tabla es:
 - split: criterio para hacer la partición del nodo
 - n: numero de datos que componen el nodo.
 - deviance: = RSS = $\sum(y_i - \hat{y}_i)^2$.
+
 ```{r}
 n = nrow(datos)
 ( deviance_root = sum( (datos$consumo - mean(datos$consumo))^2 ) )
 ```
+
 - yval: predicción del nodo = $\bar{y}$
+
 ```{r}
 mean(datos$consumo)
 ```
 
+- un asterisco * para indicar un nodo terminal u hoja.
 
 # Parámetros del árbol
 
 ```{r}
-t2 = tree(consumo ~ cv + peso,data=datos, control = tree.control(nobs=nrow(datos),mincut = 20,minsize = 40,mindev = 0.005))
+t2 = tree(consumo ~ .,data=datos, control = tree.control(nobs=nrow(datos),mincut = 20,minsize = 40,mindev = 0.05))
 plot(t2)
 text(t2, cex=.75)
 ```
@@ -67,6 +75,23 @@ control:
 print(t2)
 ```
 
+- si queremos obtener un árbol que se ajusta perféctamente a los datos hay que utilizar  mindev = 0 y minsize = 2. Estos árboles predicen muy mal porque son muy sensibles a ligeros cambios en los datos.
+
+```{r}
+t3 = tree(consumo ~ ., data=datos, control = tree.control(nobs=nrow(datos),minsize = 2,mindev = 0.0))
+plot(t3)
+#text(t3, cex=.75)
+```
+
+# Podado
+
+```{r}
+t3_prune = prune.tree(t3, best = 8)
+plot(t3_prune)
+text(t3_prune, cex=.75)
+```
+
+
 # Training set *vs* Test set
 
 Dividimos los datos en dos partes, una para entrenar el modelo y otra para calcular el error de predicción con datos diferentes de los utilizados para entrenar:
@@ -76,7 +101,7 @@ set.seed(321)
 ndat = nrow(datos)
 train = sample(1:ndat,ndat/2) # la mitad de los datos para entranamiento
 datos_train = datos[train,] # trainning set
-datos_test = datos[-train,] # validation set
+datos_test = datos[-train,] # test set
 ```
 
 Entrenamiento del modelo
@@ -87,7 +112,7 @@ plot(t3)
 text(t3)
 ```
 
-Error del modelo
+## Error del modelo
 
 ```{r}
 y_train_p <- predict(t3, newdata = datos_train)
@@ -98,8 +123,13 @@ y_train_p <- predict(t3, newdata = datos_train)
 y_train = datos_train$consumo
 plot(y_train,y_train_p)
 abline(0,1) # como pintamos y vs yp, la relacion perfecta deberia ser una recta a 45º (m=1)
+```
+
+```{r}
 ( MSE_train = mean((y_train-y_train_p)^2) ) # error cuadratico medio en los datos de training
 ```
+
+## Error de predicción
 
 ```{r}
 # prediccion del consumo con los datos de test

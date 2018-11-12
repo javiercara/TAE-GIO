@@ -42,7 +42,7 @@ plot(datos$age,datos$wage, cex = 0.5, col = "darkgrey", ylab = "wage (x 1000 $)"
 
 ```{r}
 library(splines)
-m1 = lm(wage ~ ns(year,4)+ns(age,5)+education,data=Wage)
+m1 = lm(wage ~ ns(year,4)+ns(age,5)+education,data=datos)
 summary(m1)
 ```
 
@@ -58,7 +58,7 @@ plot.Gam(m1, se=TRUE, col="red")
 - Vamos a utilizar ahora *smoothing splines*:
 
 ```{r}
-m2 = gam(wage ~ s(year,4) + s(age,5) + education, data=Wage)
+m2 = gam(wage ~ s(year,4) + s(age,5) + education, data=datos)
 summary(m2)
 ```
 
@@ -70,14 +70,14 @@ plot.Gam(m2, se=TRUE, col="red")
 ```
 
 ```{r}
-m3 = gam(wage ~ year + s(age,5) + education, data=Wage)
+m3 = gam(wage ~ year + s(age,5) + education, data=datos)
 summary(m3)
 ```
 
 - Podemos usar regresión local:
 
 ```{r}
-m4 = gam(wage ~ year + lo(age,span = 0.7) + education, data=Wage)
+m4 = gam(wage ~ year + lo(age,span = 0.7) + education, data=datos)
 summary(m4)
 ```
 

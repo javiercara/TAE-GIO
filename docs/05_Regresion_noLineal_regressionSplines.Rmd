@@ -63,6 +63,16 @@ $$
 
 - Por tanto, un modelo que utiliza splines de orden 3 (d=3) y cuatro nodos (k = 4) tiene 7 grados de libertad. 
 
+- Al fin y al cabo, la spline definida de esta manera es un polinomio de orden *d+k*. Por tanto se puede expresar utilizando una base de tamaño *d*:
+
+$$
+p(x) = a_1 b_1(x) + a_2 b_2(x) + \cdots + a_{d+k} b_{d+k}(x)
+$$
+
+- Esta base no es única. Si conocemos una base para *p(x)* podemos estimar los parámetros utilizando regresión lineal.
+
+
+
 # Datos
 
 Datos: Wage

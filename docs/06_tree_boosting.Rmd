@@ -1,0 +1,99 @@
+---
+title: "Boosting"
+author: "Javier Cara"
+date: "curso 2018-19"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+# Lectura de datos
+
+```{r cars}
+library(tree)
+datos = read.table('coches.txt',header=T)
+datos = na.omit(datos)
+datos$origen = factor(datos$origen, labels = c("USA","Europa","Japon"))
+```
+
+# Training set *vs* Test set
+
+Dividimos los datos en dos partes, una para entrenar el modelo y otra para calcular el error de predicción con datos diferentes de los utilizados para entrenar:
+
+```{r}
+set.seed(321)
+ndat = nrow(datos)
+train = sample(1:ndat,ndat/2) # la mitad de los datos para entranamiento
+datos_train = datos[train,] # trainning set
+datos_test = datos[-train,] # test set
+```
+
+# Boosting
+
+
+- Se puede utilizar para otros modelos además de los árboles.
+- El modelo verifica que: $y_i = \hat f(x) + r_i$.
+- Tomar $\hat f(x)=0$ y $r_i = y_i$.
+- For b = 1, ..., B
+    - Estimar un arbol $\hat f_b(x)$ con (d+1) nodos (d splits).
+    - Actualizar el modelo: $\hat f(x) = \hat f(x) + \lambda \hat f_b(x)$
+    - Actualizar los residuos: $r_i = r_i - \lambda \hat f_b(x)$
+- El resultado es el modelo boosted:
+
+$$
+\hat f(x) = \sum _{b=1}^{B} \lambda \hat f_b(x), \quad r_i \rightarrow 0
+$$
+- El parámetro $\lambda$ controla la velociad del proceso.
+
+```{r}
+library(gbm)
+set.seed(321)
+boost1 = gbm(consumo ~ ., data = datos_train, distribution = "gaussian", n.trees = 5000, interaction.depth = 4)
+```
+
+- interaction.depth = 4: Como mucho, cada árbol tendrá cuadro niveles (5 nodos terminales).
+
+# Importancia de variables
+
+```{r}
+summary(boost1)
+```
+
+# Predicciones
+
+```{r}
+y_train = datos_train$consumo
+yp_train_boost1 = predict(boost1, newdata = datos_train, n.trees = 5000)
+( MSE_train_boost1 = mean((y_train - yp_train_boost1)^2) )
+```
+
+Es lógico, ya que los modelos con boosting verifican que $r_i \rightarrow 0$.
+
+```{r}
+y_test = datos_test$consumo
+yp_test_boost1 = predict(boost1, newdata = datos_test, n.trees = 5000)
+( MSE_test_boost1 = mean((y_test - yp_test_boost1)^2) )
+```
+
+Que es superior al obtenido con bagging y random forest.
+
+Se puede modificar el parámetro $\lambda$, que por defecto es 0.001
+
+```{r}
+boost2 = gbm(consumo ~ ., data = datos_train, distribution = "gaussian", n.trees = 5000, interaction.depth = 4, shrinkage = 0.2)
+```
+
+```{r}
+yp_train_boost2 = predict(boost2, newdata = datos_train, n.trees = 5000)
+( MSE_train_boost2 = mean((y_train - yp_train_boost2)^2) )
+```
+
+```{r}
+yp_test_boost2 = predict(boost2, newdata = datos_test, n.trees = 5000)
+( MSE_test_boost2 = mean((y_test - yp_test_boost2)^2) )
+```
+

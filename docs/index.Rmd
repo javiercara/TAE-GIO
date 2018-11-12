@@ -37,4 +37,9 @@ knitr::include_graphics("ISLCover.jpg")
     vi. [GAMs](05_Regresion_noLineal_GAMs.html)
 6. Árboles de regresión
     i. [Introducción a los árboles de regresión](06_tree_intro.html)
-    ii. [Árboles de regresión](06_tree_regresión.html)
+    ii. [Árboles de regresión](06_tree_regresion.html)
+    iii. [Bagging](06_tree_bagging.html)
+    iv. [Random Forest](06_tree_RandomForest.html)
+    v. [Boosting](06_tree_boosting.html)
+    
+<br>

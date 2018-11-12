@@ -32,7 +32,7 @@ text(t1,pretty=0)
 
 ```{r}
 plot(datos$cv,datos$consumo,xlab="CV",ylab="Consumo")
-partition.tree(tree=t1, label = "Consumo", add = TRUE, col = "red", lwd = 3)
+partition.tree(tree=t1, add = TRUE, col = "red", lwd = 3)
 ```
 
 # 2. Arbol con DOS regresores
